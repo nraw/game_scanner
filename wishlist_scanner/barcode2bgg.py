@@ -13,7 +13,7 @@ from wishlist_scanner.errors import (NoGoogleMatchesForBarcodeError,
 def barcode2bgg(query, return_id=True):
     if query.isdigit():
         titles = find_titles_from_barcode(query)
-        title = process_titles(titles)
+        title = process_titles(titles, query)
     else:
         logger.warning("not really a barcode, but I'll just try to parse it")
         title = query
@@ -59,7 +59,7 @@ def get_titles(response):
     return titles
 
 
-def process_titles(titles):
+def process_titles(titles, query=""):
     if len(titles) == 1:
         title = titles[0]
         logger.warning(f"Only one title matched. Keeping whole title: {title}")
@@ -68,6 +68,8 @@ def process_titles(titles):
         counter = Counter()
         for other_title in other_titles:
             counter += Counter(other_title.split())
+        if query in counter:
+            _ = counter.pop(query)
         first_title = titles[0]
         title_words = first_title.split()
         title_words = [word for word in title_words if word in counter]
