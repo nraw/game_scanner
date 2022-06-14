@@ -21,3 +21,10 @@ async def scan(barcode):
     except NotBGGPageError as e:
         return RedirectResponse(e.url)
     return RedirectResponse(url)
+
+
+@app.get("/barcode2bgg/{barcode}")
+async def call_barcode2bgg(barcode):
+    logger.info(f"{barcode=}")
+    bgg_id = barcode2bgg(barcode, return_id=True)
+    return bgg_id
