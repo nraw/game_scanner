@@ -7,6 +7,7 @@ from loguru import logger
 
 from wishlist_scanner.errors import (NoGoogleMatchesForBarcodeError,
                                      NotBGGPageError, NotBoardgamePageError)
+from wishlist_scanner.settings import conf
 
 
 @lru_cache(1000)
@@ -68,8 +69,7 @@ def process_titles(titles, query=""):
         counter = Counter()
         for other_title in other_titles:
             counter += Counter(other_title.split())
-        if query in counter:
-            _ = counter.pop(query)
+        counter = filter_counter(counter, query)
         first_title = titles[0]
         title_words = first_title.split()
         title_words = [word for word in title_words if word in counter]
@@ -80,6 +80,16 @@ def process_titles(titles, query=""):
                 f"No common words between searches. Keeping first title: {title}"
             )
     return title
+
+
+def filter_counter(counter, query):
+    bad_words = conf["bad_words"]
+    if query in counter:
+        _ = counter.pop(query)
+    for bad_word in bad_words:
+        if bad_word in counter:
+            _ = counter.pop(bad_word)
+    return counter
 
 
 def get_bgg_url(title):
