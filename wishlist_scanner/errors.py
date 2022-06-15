@@ -1,10 +1,10 @@
 from loguru import logger
 
 
-class NoGoogleMatchesForBarcodeError(Exception):
+class NoGoogleMatchesError(Exception):
     def __init__(self, value):
         self.value = value
-        self.message = "lol nothing found, good luck dude"
+        self.message = f"lol nothing found, good luck with: {value}"
         logger.error(self.message)
 
 

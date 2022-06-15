@@ -5,8 +5,8 @@ from functools import lru_cache
 import requests
 from loguru import logger
 
-from wishlist_scanner.errors import (NoGoogleMatchesForBarcodeError,
-                                     NotBGGPageError, NotBoardgamePageError)
+from wishlist_scanner.errors import (NoGoogleMatchesError, NotBGGPageError,
+                                     NotBoardgamePageError)
 from wishlist_scanner.settings import conf
 
 
@@ -37,10 +37,6 @@ def barcode2bgg(query, return_id=True):
 
 def find_titles_from_barcode(query):
     response = query_google(query)
-
-    if "items" not in response:
-        raise NoGoogleMatchesForBarcodeError(query)
-
     titles = get_titles(response)
     return titles
 
@@ -52,6 +48,8 @@ def query_google(query):
     url = f"https://customsearch.googleapis.com/customsearch/v1?key={GOOGLE_KEY}&cx={GOOGLE_CX}&q={real_query}"
     res = requests.get(url)
     response = res.json()
+    if "items" not in response:
+        raise NoGoogleMatchesError(query)
     return response
 
 
