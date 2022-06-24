@@ -3,8 +3,7 @@ from fastapi.responses import RedirectResponse
 from loguru import logger
 
 from wishlist_scanner.barcode2bgg import barcode2bgg
-from wishlist_scanner.errors import (NoGoogleMatchesError,
-                                     NotBGGPageError)
+from wishlist_scanner.errors import NoGoogleMatchesError, NotBGGPageError
 
 app = FastAPI()
 
@@ -16,7 +15,7 @@ async def scan(barcode):
     try:
         url = barcode2bgg(barcode, return_id=False)
         logger.info(f"{url=}")
-    except NoGoogleMatchesForBarcodeError as e:
+    except NoGoogleMatchesError as e:
         return e.value
     except NotBGGPageError as e:
         return RedirectResponse(e.url)
