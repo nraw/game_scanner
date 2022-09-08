@@ -6,6 +6,8 @@ RUN apt-get update -y && apt-get install -y \
   vim \
   && rm -rf /var/lib/apt/lists/*
 
+RUN pip install awslambdaric
+
 # making stdout unbuffered (any non empty string works)
 ENV PYTHONUNBUFFERED="thisistheway"
 
@@ -21,3 +23,5 @@ RUN pip install -r requirements.txt
 COPY . app
 WORKDIR app
 
+ENTRYPOINT [ "/usr/local/bin/python", "-m", "awslambdaric" ]
+CMD [ "lambda_handler.lambda_handler" ]
