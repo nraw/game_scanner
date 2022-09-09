@@ -7,9 +7,20 @@ def lambda_handler(event, context):
     logger.info(event)
     if "queryStringParameters" in event:
         barcode = event["queryStringParameters"]["barcode"]
+        redirect = event["queryStringParameters"].get("redirect", "")
     else:
         barcode = event["barcode"]
     url = barcode2bgg(barcode, return_id=False)
-    response = {"isBase64Encoded": False, "statusCode": 200, "body": url}
-    #  response = dict(request=event, prediction=url)
+    if redirect:
+
+        response = {
+            "headers": {
+                "Location": url,
+            },
+            "statusCode": 302,
+            "body": "",
+        }
+    else:
+        response = {"isBase64Encoded": False, "statusCode": 200, "body": url}
+
     return response
