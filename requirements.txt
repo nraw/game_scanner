@@ -1,4 +1,5 @@
 requests==2.25.1
-fastapi==0.78.0
-uvicorn
+# fastapi==0.78.0
+flask
+# uvicorn
 loguru
