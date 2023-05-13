@@ -1,4 +1,4 @@
-from wishlist_scanner.barcode2bgg import barcode2bgg
+from game_scanner.barcode2bgg import barcode2bgg
 
 
 def main():

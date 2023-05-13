@@ -5,9 +5,9 @@ from functools import lru_cache
 import requests
 from loguru import logger
 
-from wishlist_scanner.errors import (NoGoogleMatchesError, NotBGGPageError,
+from game_scanner.errors import (NoGoogleMatchesError, NotBGGPageError,
                                      NotBoardgamePageError)
-from wishlist_scanner.settings import conf
+from game_scanner.settings import conf
 
 
 @lru_cache(1000)

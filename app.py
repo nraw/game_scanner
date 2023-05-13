@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from loguru import logger
 
-from wishlist_scanner.barcode2bgg import barcode2bgg
-from wishlist_scanner.errors import NoGoogleMatchesError, NotBGGPageError
+from game_scanner.barcode2bgg import barcode2bgg
+from game_scanner.errors import NoGoogleMatchesError, NotBGGPageError
 
 app = FastAPI()
 
