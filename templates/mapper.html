@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.4/dist/tailwind.min.css" rel="stylesheet">
+    <title>Game Scanner</title>
+</head>
+<body>
+    <header class="bg-blue-500 text-white text-center py-4">
+        <h1>What game did you try to scan?</h1>
+    </header>
+    <div class="container mx-auto my-8 flex justify-center">
+        <form method="GET">
+            <label for="bgg_id" class="block">Scanned barcode: {{query}}</label>
+            <input type="text" id="bgg_id" name="bgg_id" class="border border-gray-300 px-2 py-1" placeholder="Enter bgg game ID">
+						<input type="text" id="query" name="query" value="{{ query }}" hidden>
+            <button type="submit" class="bg-blue-500 text-white px-4 py-2 mt-4">Submit</button>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,4 +1,4 @@
-from flask import redirect
+from flask import redirect, render_template
 from loguru import logger
 
 from game_scanner.barcode2bgg import barcode2bgg
@@ -25,7 +25,10 @@ def main(request):
         if saved_bgg_id:
             game_id = saved_bgg_id
         else:
-            game_id = barcode2bgg(query)
+            try:
+                game_id = barcode2bgg(query)
+            except Exception:
+                return render_template("mapper.html", query=query)
             save_bgg_id(query, game_id, extra={"auto": True})
     if bgg_id and query:
         save_bgg_id(query, bgg_id, extra={"auto": False})
