@@ -2,25 +2,33 @@ from flask import redirect
 from loguru import logger
 
 from game_scanner.barcode2bgg import barcode2bgg
+from game_scanner.db import retrieve_document
 from game_scanner.register_play import register_play
+from game_scanner.save_bgg_id import save_bgg_id
 
 
 def main(request):
     request_args = request.args.to_dict()
     logger.info(request_args)
-    query = request_args["query"]
+    query = request_args.get("query")
     logger.info(query)
     play = "play" in request_args
     logger.info(play)
     is_redirect = "redirect" in request_args
     logger.info(is_redirect)
-    #  query = "634482735077"
-    #  query = "736211019233"
-    #  query = "728028482775"
-    #  query = "9701125875023"
-    #  query = "4250231725357"
-    #  query = "630509665129"
-    game_id = barcode2bgg(query)
+    bgg_id = request_args.get("bgg_id")
+
+    if bgg_id:
+        game_id = bgg_id
+    else:
+        saved_bgg_id = retrieve_document(query)
+        if saved_bgg_id:
+            game_id = saved_bgg_id
+        else:
+            game_id = barcode2bgg(query)
+            save_bgg_id(query, game_id, extra={"auto": True})
+    if bgg_id and query:
+        save_bgg_id(query, bgg_id, extra={"auto": False})
     url = f"https://www.boardgamegeek.com/boardgame/{game_id}"
     logger.info(url)
     if play:
