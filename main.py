@@ -17,21 +17,16 @@ def main(request):
     is_redirect = "redirect" in request_args
     logger.info(is_redirect)
     bgg_id = request_args.get("bgg_id")
+    logger.info(bgg_id)
+    bg_name = request_args.get("bg_name")
+    logger.info(bg_name)
 
-    if bgg_id:
-        game_id = bgg_id
-    else:
-        saved_bgg_id = retrieve_document(query)
-        if saved_bgg_id:
-            game_id = saved_bgg_id
-        else:
-            try:
-                game_id = barcode2bgg(query)
-            except Exception:
-                return render_template("mapper.html", query=query)
-            save_bgg_id(query, game_id, extra={"auto": True})
-    if bgg_id and query:
-        save_bgg_id(query, bgg_id, extra={"auto": False})
+    try:
+        game_id = get_game_id(bgg_id, bg_name, query)
+    except Exception:
+        return render_template("mapper.html", query=query)
+    was_automatic = not ((bgg_id or bg_name) and query)
+    save_bgg_id(query, game_id, extra={"auto": was_automatic})
     url = f"https://www.boardgamegeek.com/boardgame/{game_id}"
     logger.info(url)
     if play:
@@ -41,4 +36,19 @@ def main(request):
     if is_redirect:
         logger.info("Redirecting")
         return redirect(url)
+    return game_id
+
+
+def get_game_id(bgg_id, bg_name, query):
+    if bgg_id:
+        game_id = bgg_id
+        return game_id
+    if bg_name:
+        game_id = barcode2bgg(bg_name)
+        return game_id
+    saved_bgg_id = retrieve_document(query)
+    if saved_bgg_id:
+        game_id = saved_bgg_id
+        return game_id
+    game_id = barcode2bgg(query)
     return game_id

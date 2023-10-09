@@ -6,7 +6,7 @@ import requests
 from loguru import logger
 
 from game_scanner.errors import (NoGoogleMatchesError, NotBGGPageError,
-                                     NotBoardgamePageError)
+                                 NotBoardgamePageError)
 from game_scanner.settings import conf
 
 
@@ -14,6 +14,9 @@ from game_scanner.settings import conf
 def barcode2bgg(query, return_id=True):
     if query.isdigit():
         titles = find_titles_from_barcode(query)
+        if type(titles) == str:
+            game_id = titles
+            return game_id
         title = process_titles(titles, query)
     else:
         logger.warning("not really a barcode, but I'll just try to parse it")
@@ -22,7 +25,7 @@ def barcode2bgg(query, return_id=True):
     url = get_bgg_url(title)
     is_bgg = "boardgamegeek" in url
     if not is_bgg:
-        raise NotBGGPageError(value=titles[0], url=url)
+        raise NotBGGPageError(value=title, url=url)
     else:
         if not return_id:
             return url
@@ -54,6 +57,12 @@ def query_google(query):
 
 
 def get_titles(response):
+    items = response.get("items")
+    if items:
+        link = items[0]["link"]
+        if "boardgamegeek" in link and "boardgame" in link:
+            bgg_id = link.split("/")[4]
+            return bgg_id
     titles = [item["title"].lower() for item in response["items"]]
     return titles
 
