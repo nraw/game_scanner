@@ -1,6 +1,4 @@
-requests==2.25.1
-# fastapi==0.78.0
-flask
-# uvicorn
+requests
+flask==2.3.2
 loguru
 firebase-admin
