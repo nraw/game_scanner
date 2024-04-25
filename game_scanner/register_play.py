@@ -6,12 +6,13 @@ import requests
 
 
 def register_play(game_id):
-    #  game_id = 161417
+    play_payload = get_play_payload(game_id)
+    register_to_bgg(play_payload)
+
+
+def register_to_bgg(play_payload):
     username = os.environ["BGG_USERNAME"]
     password = os.environ["BGG_PASS"]
-
-    play_date = date.today().isoformat()
-    play_datetime = datetime.now().isoformat()
 
     login_payload = {"credentials": {"username": username, "password": password}}
     headers = {"content-type": "application/json"}
@@ -23,39 +24,45 @@ def register_play(game_id):
             headers=headers,
         )
 
-        play_payload = {
-            "playdate": play_date,
-            #  "comments": "comments go here",
-            #  "length": 60,
-            #  "twitter": "false",
-            #  "minutes": 60,
-            #  "location": "Home",
-            "objectid": str(game_id),
-            #  "hours": 0,
-            "quantity": "1",
-            "action": "save",
-            "date": play_datetime,
-            #  "players": [
-            #      {
-            #          "username": "",
-            #          "userid": 0,
-            #          "repeat": "true",
-            #          "name": "Non-BGG Friend",
-            #          "selected": "false"
-            #      },
-            #      {
-            #          "username": "youruserid",
-            #          "userid": 123456
-            #          "name": "Me!",
-            #          "selected": "false"
-            #      }
-            #  ],
-            "objecttype": "thing",
-            "ajax": 1,
-        }
         r = s.post(
             "https://boardgamegeek.com/geekplay.php",
             data=json.dumps(play_payload),
             headers=headers,
         )
     return r
+
+
+def get_play_payload(game_id):
+    play_date = date.today().isoformat()
+    play_datetime = datetime.now().isoformat()
+    play_payload = {
+        "playdate": play_date,
+        #  "comments": "comments go here",
+        #  "length": 60,
+        #  "twitter": "false",
+        #  "minutes": 60,
+        #  "location": "Home",
+        "objectid": str(game_id),
+        #  "hours": 0,
+        "quantity": "1",
+        "action": "save",
+        "date": play_datetime,
+        #  "players": [
+        #      {
+        #          "username": "",
+        #          "userid": 0,
+        #          "repeat": "true",
+        #          "name": "Non-BGG Friend",
+        #          "selected": "false"
+        #      },
+        #      {
+        #          "username": "youruserid",
+        #          "userid": 123456
+        #          "name": "Me!",
+        #          "selected": "false"
+        #      }
+        #  ],
+        "objecttype": "thing",
+        "ajax": 1,
+    }
+    return play_payload

@@ -21,14 +21,14 @@ def get_db_connection():
     return db
 
 
-def save_document(data):
-    c = get_collection()
+def save_document(data, collection_name="games"):
+    c = get_collection(collection_name=collection_name)
     c.add(data)
     logger.info(f"Saved document: {data}")
 
 
-def retrieve_document(query):
-    c = get_collection()
+def retrieve_document(query, collection_name="games"):
+    c = get_collection(collection_name=collection_name)
     bgg_id = ""
     docs = (
         c.where("query", "==", query)
@@ -44,3 +44,16 @@ def retrieve_document(query):
         logger.info(f"No bgg_id for query: {query}")
         pass
     return bgg_id
+
+
+def retrieve_play_request(message_id):
+    c = get_collection(collection_name="play_requests")
+    docs = c.where("message_id", "==", message_id).stream()
+    try:
+        doc = next(docs)
+        doc_data = doc.to_dict()
+        logger.info(f"Retrieved play request: {doc_data}")
+    except StopIteration:
+        logger.info(f"No play request for message_id: {message_id}")
+        doc_data = {}
+    return doc_data

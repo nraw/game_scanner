@@ -4,5 +4,8 @@ prod:
 test:
 	flask --app test_mapper.py run
 
+telegram:
+	python3 telegram_app.py
+
 deploy:
 	gcloud functions deploy game_scanner --allow-unauthenticated --entry-point=main --gen2 --runtime=python311 --max-instances=1 --trigger-http --env-vars-file=.env
