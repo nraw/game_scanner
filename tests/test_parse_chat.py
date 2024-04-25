@@ -10,3 +10,10 @@ def test_parse_chat():
     ]
     answer = parse_chat(messages)
     assert "spirit island" in answer.lower()
+
+def test_ping_gpt():
+    client = openai.OpenAI(
+        api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_BASE_URL"]
+    )
+    system_prompt = 'Hi'
+    params_raw = ping_gpt(client, system_prompt)

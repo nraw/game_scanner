@@ -3,6 +3,7 @@ import os
 from datetime import date
 
 import openai
+from loguru import logger
 
 from game_scanner.db import retrieve_play_request, save_document
 from game_scanner.play_payload_management import (get_extra_info,
@@ -11,12 +12,17 @@ from game_scanner.register_play import register_to_bgg
 from game_scanner.schemas import PlayPayload, PlayRequest
 
 
-def parse_chat(messages: list[dict], message_id: str = 0):
+def parse_chat(messages: list[dict], message_id: int = 0):
     client = openai.OpenAI(
         api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_BASE_URL"]
     )
     system_prompt = get_processing_prompt(messages)
-    params_raw = ping_gpt(client, system_prompt)
+    try:
+        params_raw = ping_gpt(client, system_prompt)
+    except openai.RateLimitError as e:
+        logger.error(e)
+        answer = "Rate limit exceeded. Am I in trouble? (•̪ o •̪)"
+        return answer
     params = json.loads(params_raw)
     play_request = PlayRequest(**params)
     data = play_request.model_dump()
@@ -26,6 +32,7 @@ def parse_chat(messages: list[dict], message_id: str = 0):
     data["message_id"] = message_id
     save_document(data, collection_name="play_requests")
     answer = play_request_md
+
     #  r = register_to_bgg(play_payload.model_dump())
     #  print(payload_to_md(play_payload))
     return answer
