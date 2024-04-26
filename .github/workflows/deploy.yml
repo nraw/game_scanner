@@ -1,9 +1,13 @@
 name: Docker Image CICD
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   build:
+    environment: prod
     runs-on: self-hosted
     steps:
     - uses: actions/checkout@v2
