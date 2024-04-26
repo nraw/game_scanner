@@ -1,17 +1,24 @@
-name: Deploy
+name: Docker Image CICD
 
-on:
-  push:
-    branches:
-      - master
+on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v2
-      - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
-        with:
-          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
-          heroku_app_name: "wishlist-scanner"
-          heroku_email: "marsic.andrej@gmail.com"
+    - uses: actions/checkout@v2
+    - name: Save firestore key
+      run: echo "${{ secrets.FIRESTORE_KEY }}" > nraw-key.json
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag game_scanner:latest
+    - name: Run the Docker image
+      run: |
+        docker run -d --restart unless-stopped \
+        -e GOOGLE_KEY=${{ secrets.GOOGLE_KEY }} \
+        -e GOOGLE_CX=${{ secrets.GOOGLE_CX }} \
+        -e BGG_USERNAME=${{ secrets.BGG_USERNAME }} \
+        -e BGG_PASS=${{ secrets.BGG_PASS }} \
+        -e TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }} \
+        -e OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }} \
+        -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+        game_scanner:latest python3 telegram_app.py
