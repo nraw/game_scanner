@@ -5,11 +5,10 @@ from datetime import date
 import openai
 from loguru import logger
 
-from game_scanner.db import retrieve_play_request, save_document
+from game_scanner.db import  save_document
 from game_scanner.play_payload_management import (get_extra_info,
                                                   play_request_to_md)
-from game_scanner.register_play import register_to_bgg
-from game_scanner.schemas import PlayPayload, PlayRequest
+from game_scanner.schemas import PlayRequest
 
 
 def parse_chat(messages: list[dict], message_id: int = 0):
@@ -90,21 +89,3 @@ def get_parameters_tool():
     ]
     tool_choice = {"type": "function", "function": {"name": tool_name}}
     return tools, tool_choice
-
-
-def spike_it(message_id):
-    data = retrieve_play_request(message_id)
-    play_payload = PlayPayload(**data).model_dump()
-    r = register_to_bgg(play_payload)
-    message = process_register_response(r)
-    return message
-
-
-def process_register_response(r):
-    res = r.json()
-    relative_url = res["html"].split('"')[1]
-    url = "https://boardgamegeek.com" + relative_url
-    message = (
-        f"SPIKED IT! You've now played it [{res['numplays']} times]({url}) (•̪ o •̪)"
-    )
-    return message
