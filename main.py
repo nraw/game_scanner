@@ -37,11 +37,14 @@ def main(request):
         logger.info("Registering play")
         r = register_play(game_id)
         logger.info(r)
-        message, url = process_register_response(r)
-        bot = telebot.TeleBot(os.environ["TELEGRAM_TOKEN"], parse_mode="Markdown")
-        bot.send_message(
-            chat_id=os.getenv("TELEGRAM_CHAT_ID", -4108154376), text=message
-        )
+        try:
+            message, url = process_register_response(r)
+            bot = telebot.TeleBot(os.environ["TELEGRAM_TOKEN"], parse_mode="Markdown")
+            bot.send_message(
+                chat_id=os.getenv("TELEGRAM_CHAT_ID", -4108154376), text=message
+            )
+        except Exception as e:
+            logger.error(e)
     if is_redirect:
         logger.info("Redirecting")
         return redirect(url)
