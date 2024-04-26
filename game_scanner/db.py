@@ -1,3 +1,6 @@
+import json
+import os
+
 import firebase_admin
 from firebase_admin import credentials, firestore
 from loguru import logger
@@ -10,7 +13,12 @@ def get_collection(collection_name="games"):
 
 
 def get_db_connection():
-    cred = credentials.Certificate("nraw-key.json")
+    firestore_key = os.environ.get("FIRESTORE_KEY")
+    if firestore_key:
+        firestore_creds = json.loads(firestore_key)
+        cred = credentials.Certificate(firestore_creds)
+    else:
+        cred = credentials.Certificate("nraw-key.json")
 
     try:
         app = firebase_admin.initialize_app(cred)

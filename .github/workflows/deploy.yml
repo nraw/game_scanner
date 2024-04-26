@@ -11,13 +11,19 @@ jobs:
     runs-on: self-hosted
     steps:
     - uses: actions/checkout@v2
-    - name: Save firestore key
-      run: printf '%s' "${{ secrets.FIRESTORE_KEY }}" > nraw-key.json
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag game_scanner:latest
+    - name: Stop and remove existing container
+      run: |
+        if docker ps -a | grep -q game_scanner; then
+          docker rm -f game_scanner
+        fi
     - name: Run the Docker image
       run: |
-        docker run -d --restart unless-stopped \
+        docker run 
+        -d \ 
+        --restart unless-stopped \
+        --name game_scanner \
         -e GOOGLE_KEY=${{ secrets.GOOGLE_KEY }} \
         -e GOOGLE_CX=${{ secrets.GOOGLE_CX }} \
         -e BGG_USERNAME=${{ secrets.BGG_USERNAME }} \
@@ -25,4 +31,5 @@ jobs:
         -e TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }} \
         -e OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }} \
         -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+        -e FIRESTORE_KEY=${{ secrets.FIRESTORE_KEY }} \
         game_scanner:latest python3 telegram_app.py
