@@ -3,6 +3,7 @@ import os
 import telebot
 from loguru import logger
 
+from game_scanner.errors import NoGoogleMatchesError
 from game_scanner.parse_chat import parse_chat, spike_it
 from game_scanner.telegram_utils import check_is_user
 
@@ -56,7 +57,10 @@ def next_step(message):
             {"role": "assistant", "content": message.reply_to_message.text}
         ]
         messages = previos_message + messages
-    answer = parse_chat(messages, message_id=message.id)
+    try:
+        answer = parse_chat(messages, message_id=message.id)
+    except NoGoogleMatchesError as e:
+        bot.reply_to(message, str(e))
     #  answer = message.text
     button_foo = telebot.types.InlineKeyboardButton(
         "Spike it!", callback_data="pl-" + str(message.id)
