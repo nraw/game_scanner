@@ -12,7 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Save firestore key
-      run: echo "${{ secrets.FIRESTORE_KEY }}" > nraw-key.json
+      run: printf '%s' "${{ secrets.FIRESTORE_KEY }}" > nraw-key.json
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag game_scanner:latest
     - name: Run the Docker image
