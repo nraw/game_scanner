@@ -20,9 +20,7 @@ jobs:
         fi
     - name: Run the Docker image
       run: |
-        docker run \
-        -d \ 
-        --restart unless-stopped \
+        docker run -d --restart unless-stopped \
         --name game_scanner \
         -e GOOGLE_KEY=${{ secrets.GOOGLE_KEY }} \
         -e GOOGLE_CX=${{ secrets.GOOGLE_CX }} \
@@ -31,5 +29,5 @@ jobs:
         -e TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }} \
         -e OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }} \
         -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-        -e FIRESTORE_KEY=${{ secrets.FIRESTORE_KEY }} \
+        -e FIRESTORE_KEY='${{ secrets.FIRESTORE_KEY }}' \
         game_scanner:latest python3 telegram_app.py
