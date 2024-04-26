@@ -20,7 +20,7 @@ jobs:
         fi
     - name: Run the Docker image
       run: |
-        docker run 
+        docker run \
         -d \ 
         --restart unless-stopped \
         --name game_scanner \
