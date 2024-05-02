@@ -68,14 +68,15 @@ def next_step(message):
     except NoGoogleMatchesError as e:
         bot.reply_to(message, str(e))
         return
-    button_foo = telebot.types.InlineKeyboardButton(
+    button_spike = telebot.types.InlineKeyboardButton(
         "Spike it!", callback_data="pl-" + str(message.id)
     )
-    button_foo = telebot.types.InlineKeyboardButton(
+    button_set = telebot.types.InlineKeyboardButton(
         "Set it!", callback_data="wl-" + str(message.id)
     )
     keyboard = telebot.types.InlineKeyboardMarkup()
-    keyboard.add(button_foo)
+    keyboard.add(button_spike)
+    keyboard.add(button_set)
     bot.reply_to(message, str(answer), reply_markup=keyboard)
 
 
