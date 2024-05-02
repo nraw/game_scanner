@@ -37,6 +37,11 @@ def callback_query(call):
         message_id = int(call.data.split("-")[1])
         spike_response = spike_it(message_id)
         bot.reply_to(call.message, spike_response)
+    elif call.data.startswith("wl"):
+        bot.answer_callback_query(call.id, "You clicked on Set it!")
+        message_id = int(call.data.split("-")[1])
+        set_response = set_it(message_id)
+        bot.reply_to(call.message, set_response)
 
 
 @bot.message_handler(func=lambda message: True)
@@ -65,6 +70,9 @@ def next_step(message):
         return
     button_foo = telebot.types.InlineKeyboardButton(
         "Spike it!", callback_data="pl-" + str(message.id)
+    )
+    button_foo = telebot.types.InlineKeyboardButton(
+        "Set it!", callback_data="wl-" + str(message.id)
     )
     keyboard = telebot.types.InlineKeyboardMarkup()
     keyboard.add(button_foo)
