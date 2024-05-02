@@ -3,9 +3,9 @@ import os
 import telebot
 from loguru import logger
 
+from game_scanner.commands import set_it, spike_it
 from game_scanner.errors import NoGoogleMatchesError
 from game_scanner.parse_chat import parse_chat
-from game_scanner.spikes import spike_it
 from game_scanner.telegram_utils import check_is_user
 
 bot = telebot.TeleBot(os.environ["TELEGRAM_TOKEN"], parse_mode="Markdown")
