@@ -27,6 +27,6 @@ def set_it(message_id):
     game_id = data["objectid"]
     r = add_wishlist(game_id)
     message = (
-        f"You love [it](https://boardgamegeek.com/boardgame/{game_id}) now! ٩(◕‿◕*)۶"
+        f"You love [it](https://boardgamegeek.com/boardgame/{game_id}) now! ٩(ˊᗜˋ)و"
     )
     return message
