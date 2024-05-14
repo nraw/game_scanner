@@ -5,6 +5,7 @@ def test_play_request():
     game = "Spirit Island"
     play_request = PlayRequest(game=game)
     assert play_request.game == game
+    PlayRequest.model_json_schema()
 
 
 def test_schemas():

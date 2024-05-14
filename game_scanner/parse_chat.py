@@ -5,7 +5,7 @@ from datetime import date
 import openai
 from loguru import logger
 
-from game_scanner.db import  save_document
+from game_scanner.db import save_document
 from game_scanner.play_payload_management import (get_extra_info,
                                                   play_request_to_md)
 from game_scanner.schemas import PlayRequest
@@ -43,13 +43,14 @@ def get_processing_prompt(messages: list[dict]):
     conversation = [f"{message['role']}: {message['content']}" for message in messages]
     conversation_string = "\n".join(conversation)
 
-    system_prompt = f"""you are an information retriever.
-today is the {today}. 
-the user is one of the players, {user_name}.
-retrieve the parameters needed for the playrequest from the following conversation:
+    system_prompt = f"""You are an information retriever.
+Today is the {today}. 
+The user is one of the players, {user_name}.
+Retrieve the parameters needed for the playrequest from the following conversation:
 {conversation_string}
 
-focus on the information provided by the user, as it might provide changes to the ones from the assistant.
+Focus on the information provided by the user, as it might provide changes to the ones from the assistant.
+Include information not captured by the playrequest as notes.
 """
     return system_prompt
 
