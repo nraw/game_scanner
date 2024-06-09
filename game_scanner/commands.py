@@ -40,7 +40,7 @@ def set_it(message_id):
 
 def update_my_board_games():
     try:
-        github_token = os.getenv("GITHUB_TOKEN", "")
+        github_token = os.getenv("GH_TOKEN", "")
         headers = {
             "contentType": "application/json",
             "Accept": "application/vnd.github.v3+json",

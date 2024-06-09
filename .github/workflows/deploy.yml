@@ -24,6 +24,7 @@ jobs:
         --name game_scanner \
         -e GOOGLE_KEY=${{ secrets.GOOGLE_KEY }} \
         -e GOOGLE_CX=${{ secrets.GOOGLE_CX }} \
+        -e GH_TOKEN=${{ secrets.GH_TOKEN }} \
         -e BGG_USERNAME=${{ secrets.BGG_USERNAME }} \
         -e BGG_PASS=${{ secrets.BGG_PASS }} \
         -e TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }} \
