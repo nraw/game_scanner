@@ -65,3 +65,17 @@ def retrieve_play_request(message_id):
         logger.info(f"No play request for message_id: {message_id}")
         doc_data = {}
     return doc_data
+
+
+def retrieve_messages(message_id):
+    c = get_collection(collection_name="messages")
+    docs = c.where("message_id", "==", message_id).stream()
+    try:
+        doc = next(docs)
+        doc_data = doc.to_dict()
+        previous_messages = doc_data.get("messages", [])
+        logger.info(f"Retrieved play request: {doc_data}")
+    except StopIteration:
+        logger.info(f"No play request for message_id: {message_id}")
+        previous_messages = []
+    return previous_messages

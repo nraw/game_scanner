@@ -4,6 +4,7 @@ import telebot
 from loguru import logger
 
 from game_scanner.commands import set_it, spike_it
+from game_scanner.db import retrieve_messages
 from game_scanner.errors import NoGoogleMatchesError
 from game_scanner.parse_chat import parse_chat
 from game_scanner.telegram_utils import check_is_user
@@ -60,24 +61,24 @@ def send_play(message):
 
     messages = [{"role": "user", "content": message_text}]
     if message.reply_to_message:
-        previos_message = [
+        previous_message = [
             {"role": "assistant", "content": message.reply_to_message.text}
         ]
-        messages = previos_message + messages
+        messages = previous_message + messages
     try:
         answer = parse_chat(messages, message_id=message.id)
     except NoGoogleMatchesError as e:
         bot.reply_to(message, str(e))
         return
-    button_spike = telebot.types.InlineKeyboardButton(
-        "Spike it!", callback_data="pl-" + str(message.id)
-    )
-    button_set = telebot.types.InlineKeyboardButton(
-        "Set it!", callback_data="wl-" + str(message.id)
-    )
+    #  button_spike = telebot.types.InlineKeyboardButton(
+    #      "Spike it!", callback_data="pl-" + str(message.id)
+    #  )
+    #  button_set = telebot.types.InlineKeyboardButton(
+    #      "Set it!", callback_data="wl-" + str(message.id)
+    #  )
     keyboard = telebot.types.InlineKeyboardMarkup()
-    keyboard.add(button_spike)
-    keyboard.add(button_set)
+    #  keyboard.add(button_spike)
+    #  keyboard.add(button_set)
     bot.reply_to(message, str(answer), reply_markup=keyboard)
 
 
@@ -94,12 +95,12 @@ def next_step(message):
         bot.reply_to(message, "Sorry, it seems you don't have any credit left ⊙﹏⊙")
         return
 
-    messages = [{"role": "user", "content": message.text}]
+    message_text = message.text
+    messages = [{"role": "user", "content": message_text}]
     if message.reply_to_message:
-        previos_message = [
-            {"role": "assistant", "content": message.reply_to_message.text}
-        ]
-        messages = previos_message + messages
+        previous_message_id = message.reply_to_message.id
+        previous_messages = retrieve_messages(previous_message_id)
+        messages = previous_messages + messages
     try:
         answer = parse_chat(messages, message_id=message.id)
     except NoGoogleMatchesError as e:

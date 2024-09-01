@@ -36,4 +36,4 @@ def add_wishlist(game_id: str):
             data=json.dumps(wishlist_payload),
             headers=headers,
         )
-    return r
+    return r.text

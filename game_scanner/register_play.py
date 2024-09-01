@@ -4,10 +4,23 @@ from datetime import date, datetime
 
 import requests
 
+from game_scanner.schemas import PlayPayload
+
 
 def register_play(game_id):
     play_payload = get_play_payload(game_id)
     register_to_bgg(play_payload)
+
+
+def log_play_to_bgg(**play_payload_raw):
+    play_payload = PlayPayload(**play_payload_raw).dict()
+
+    r = register_to_bgg(play_payload)
+    if r.status_code != 200:
+        error_message = f"Failed to log play: {r.text}"
+        return error_message
+    response_text = f"Successfully logged play: {play_payload}"
+    return response_text
 
 
 def register_to_bgg(play_payload):
