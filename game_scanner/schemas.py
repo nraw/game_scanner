@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -52,3 +53,14 @@ class WishlistRequest(BaseModel):
 
 class BGGIdReuqest(BaseModel):
     game: str = Field(..., description="Name of the game")
+
+
+class LogDeletionRequest(BaseModel):
+    play_id: int = Field(..., description="ID of the play to delete")
+
+
+class LogsFilter(BaseModel):
+    last_n: Optional[int] = Field(
+        None, description="Number of logs to return. Format YYYY-MM-DD"
+    )
+    since: Optional[str] = Field(None, description="Filter logs before this date")

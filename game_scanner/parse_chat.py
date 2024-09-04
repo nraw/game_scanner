@@ -9,14 +9,17 @@ from game_scanner.add_wishlist import add_wishlist
 from game_scanner.db import save_document
 from game_scanner.play_payload_management import (get_bgg_id, get_extra_info,
                                                   play_request_to_md)
-from game_scanner.register_play import log_play_to_bgg, register_to_bgg
-from game_scanner.schemas import (BGGIdReuqest, LogRequest, PlayRequest,
-                                  WishlistRequest)
+from game_scanner.register_play import (delete_logged_play, list_played_games,
+                                        log_play_to_bgg, register_to_bgg)
+from game_scanner.schemas import (BGGIdReuqest, LogDeletionRequest, LogRequest,
+                                  LogsFilter, PlayRequest, WishlistRequest)
 
 func_map = {
     "log_game": log_play_to_bgg,
     "wishlist_game": add_wishlist,
     "get_bgg_id": get_bgg_id,
+    "list_played_games": list_played_games,
+    "delete_play": delete_logged_play,
 }
 
 
@@ -85,7 +88,7 @@ Today is the {today}.
 The user is one of the players, {user_name}.
 You have the ability to log plays and add games to wishlists.
 Those actions require the BoardGameGeek ID of the game. You have a function available to you to identify the id from the game.
-When referring to a game back to the user, make a markdown hyperlink like so 
+When referring to a game back to the user, make a markdown hyperlink like so:
 [<game>](https://boardgamegeek.com/boardgame/<game_id>)
 where you replace <game> and <game_id> with the name of the game and the id of the game respectively.
 """
@@ -114,6 +117,7 @@ def ping_gpt(client, gpt_messages):
     chat_completion = client.chat.completions.create(
         messages=gpt_messages,
         #  model="gpt-3.5-turbo",
+        #  model="gpt-4o-mini",
         model="gpt-4o",
         tools=tools,
         tool_choice=tool_choice,
@@ -169,6 +173,22 @@ def get_all_tools():
                 "description": "Get the BoardGameGeek ID of a game",
                 "name": "get_bgg_id",
                 "parameters": BGGIdReuqest.model_json_schema(),
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "description": "Get the list of played games. Returns their log_id, name, play date and comment",
+                "name": "list_played_games",
+                "parameters": LogsFilter.model_json_schema(),
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "description": "Remove a play log from BoardGameGeek. Needs log_id which is obtained from list_played_games",
+                "name": "delete_play",
+                "parameters": LogDeletionRequest.model_json_schema(),
             },
         },
     ]
