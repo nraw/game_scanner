@@ -1,4 +1,5 @@
 requests
+types-requests
 flask==2.3.2
 loguru
 firebase-admin

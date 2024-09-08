@@ -44,6 +44,7 @@ def parse_chat(messages: list[dict], message_id: int = 0):
                     "content": f"Function call: {params_raw}",
                 }
             )
+            logger.info(f"Function call: {params_raw}")
             params = json.loads(params_raw.arguments)
             func_name = params_raw.name
             func = func_map[func_name]
@@ -54,6 +55,7 @@ def parse_chat(messages: list[dict], message_id: int = 0):
                     "content": f"Function output: {output}",
                 }
             )
+            logger.info(f"Function output: {output}")
     messages.append(
         {
             "role": "assistant",
@@ -186,7 +188,7 @@ def get_all_tools():
         {
             "type": "function",
             "function": {
-                "description": "Remove a play log from BoardGameGeek. Needs log_id which is obtained from list_played_games",
+                "description": "Remove a play log from BoardGameGeek. Needs log_id which is obtained from list_played_games. Always ask for confirmation before executing this function.",
                 "name": "delete_play",
                 "parameters": LogDeletionRequest.model_json_schema(),
             },

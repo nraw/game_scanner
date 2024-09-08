@@ -10,7 +10,7 @@ from game_scanner.schemas import PlayPayload
 
 
 def log_play_to_bgg(**play_payload_raw):
-    play_payload = PlayPayload(**play_payload_raw).dict()
+    play_payload = PlayPayload(**play_payload_raw).model_dump()
 
     r = register_to_bgg(play_payload)
     if r.status_code != 200:
@@ -38,7 +38,7 @@ def register_to_bgg(play_payload):
     headers = {"content-type": "application/json"}
 
     with requests.Session() as s:
-        p = s.post(
+        _ = s.post(
             "https://boardgamegeek.com/login/api/v1",
             data=json.dumps(login_payload),
             headers=headers,
@@ -110,16 +110,19 @@ def get_logged_plays(last_n: Optional[int] = None, since: Optional[str] = None):
         if last_n and i >= last_n:
             break
         if since is not None:
-            play_date = play.get("date")
+            play_date = play.get("date", "")
             if play_date < since:
                 break
         play_id = play.get("id")
         date = play.get("date")
-        game = play.find("item").get("name")
-        game_id = play.find("item").get("objectid")  # added line to get game_ids
-        comment = (
-            play.find("comments").text if play.find("comments") is not None else None
-        )
+        game_item = play.find("item")
+        if game_item:
+            game = game_item.get("name")
+            game_id = game_item.get("objectid")  # added line to get game_ids
+        else:
+            raise ValueError
+        comments = play.find("comments")
+        comment = comments.text if comments else None
         play_info = dict(
             play_id=play_id, date=date, game=game, game_id=game_id, comment=comment
         )
@@ -137,7 +140,7 @@ def delete_logged_play(play_id):
     headers = {"content-type": "application/json"}
 
     with requests.Session() as s:
-        p = s.post(
+        _ = s.post(
             "https://boardgamegeek.com/login/api/v1",
             data=json.dumps(login_payload),
             headers=headers,
@@ -148,6 +151,7 @@ def delete_logged_play(play_id):
             data=json.dumps(delete_play_payload),
             headers=headers,
         )
+    return r.text
 
 
 def get_delete_play_payload(play_id):
