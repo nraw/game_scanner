@@ -61,10 +61,9 @@ def send_play(message):
 
     messages = [{"role": "user", "content": message_text}]
     if message.reply_to_message:
-        previous_message = [
-            {"role": "assistant", "content": message.reply_to_message.text}
-        ]
-        messages = previous_message + messages
+        previous_message_id = message.reply_to_message.id
+        previous_messages = retrieve_messages(previous_message_id)
+        messages = previous_messages + messages
     try:
         answer = parse_chat(messages, message_id=message.id)
     except NoGoogleMatchesError as e:
@@ -106,15 +105,15 @@ def next_step(message):
     except NoGoogleMatchesError as e:
         bot.reply_to(message, str(e))
         return
-    button_spike = telebot.types.InlineKeyboardButton(
-        "Spike it!", callback_data="pl-" + str(message.id)
-    )
-    button_set = telebot.types.InlineKeyboardButton(
-        "Set it!", callback_data="wl-" + str(message.id)
-    )
+    #  button_spike = telebot.types.InlineKeyboardButton(
+    #      "Spike it!", callback_data="pl-" + str(message.id)
+    #  )
+    #  button_set = telebot.types.InlineKeyboardButton(
+    #      "Set it!", callback_data="wl-" + str(message.id)
+    #  )
     keyboard = telebot.types.InlineKeyboardMarkup()
-    keyboard.add(button_spike)
-    keyboard.add(button_set)
+    #  keyboard.add(button_spike)
+    #  keyboard.add(button_set)
     bot.reply_to(message, str(answer), reply_markup=keyboard)
 
 
