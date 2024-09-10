@@ -48,42 +48,24 @@ def callback_query(call):
 @bot.message_handler(commands=["play"])
 def send_play(message):
     logger.info(message)
-    user_id = message.from_user.id
-    #  chat_id = message.chat.id
-    is_user, credit = check_is_user(user_id)
-    if not is_user:
-        bot.reply_to(message, "Sorry, I was told not to talk to you... (｡ŏ_ŏ)")
-        return
-    if credit <= 0:
-        bot.reply_to(message, "Sorry, it seems you don't have any credit left ⊙﹏⊙")
-        return
-    message_text = " ".join(message.text.split()[1:])
+    message.text = " ".join(message.text.split()[1:])
+    perform_step(message)
 
-    messages = [{"role": "user", "content": message_text}]
-    if message.reply_to_message:
-        previous_message_id = message.reply_to_message.id
-        previous_messages = retrieve_messages(previous_message_id)
-        messages = previous_messages + messages
-    try:
-        answer = parse_chat(messages, message_id=message.id)
-    except NoGoogleMatchesError as e:
-        bot.reply_to(message, str(e))
-        return
-    #  button_spike = telebot.types.InlineKeyboardButton(
-    #      "Spike it!", callback_data="pl-" + str(message.id)
-    #  )
-    #  button_set = telebot.types.InlineKeyboardButton(
-    #      "Set it!", callback_data="wl-" + str(message.id)
-    #  )
-    keyboard = telebot.types.InlineKeyboardMarkup()
-    #  keyboard.add(button_spike)
-    #  keyboard.add(button_set)
-    bot.reply_to(message, str(answer), reply_markup=keyboard)
+
+@bot.message_handler(commands=["version"])
+def get_sha(message):
+    logger.info(message)
+    sha = os.popen("git rev-parse HEAD").read().strip()
+    return sha
 
 
 @bot.message_handler(func=lambda message: True)
 def next_step(message):
     logger.info(message)
+    perform_step(message)
+
+
+def perform_step(message):
     user_id = message.from_user.id
     #  chat_id = message.chat.id
     is_user, credit = check_is_user(user_id)
