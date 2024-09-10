@@ -4,7 +4,7 @@ import telebot
 from loguru import logger
 
 from game_scanner.commands import set_it, spike_it
-from game_scanner.db import retrieve_messages
+from game_scanner.db import retrieve_messages, save_document
 from game_scanner.errors import NoGoogleMatchesError
 from game_scanner.parse_chat import parse_chat
 from game_scanner.telegram_utils import check_is_user
@@ -56,11 +56,11 @@ def send_play(message):
 def get_sha(message):
     logger.info(message)
     sha = os.popen("git rev-parse HEAD").read().strip()
-    return sha
+    bot.reply_to(message, str(sha))
 
 
 @bot.message_handler(func=lambda message: True)
-def next_step(message):
+def next_step(message: telebot.types.Message):
     logger.info(message)
     perform_step(message)
 
@@ -83,7 +83,7 @@ def perform_step(message):
         previous_messages = retrieve_messages(previous_message_id)
         messages = previous_messages + messages
     try:
-        answer = parse_chat(messages, message_id=message.id)
+        messages, answer = parse_chat(messages, message_id=message.id)
     except NoGoogleMatchesError as e:
         bot.reply_to(message, str(e))
         return
@@ -96,7 +96,11 @@ def perform_step(message):
     keyboard = telebot.types.InlineKeyboardMarkup()
     #  keyboard.add(button_spike)
     #  keyboard.add(button_set)
-    bot.reply_to(message, str(answer), reply_markup=keyboard)
+    reply = bot.reply_to(message, str(answer), reply_markup=keyboard)
+    reply_id = reply.id
+    save_document(
+        {"message_id": reply_id, "messages": messages}, collection_name="messages"
+    )
 
 
 if __name__ == "__main__":

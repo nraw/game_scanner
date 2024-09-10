@@ -7,12 +7,25 @@ from loguru import logger
 
 from game_scanner.add_wishlist import add_wishlist
 from game_scanner.db import save_document
-from game_scanner.play_payload_management import (get_bgg_id, get_extra_info,
-                                                  play_request_to_md)
-from game_scanner.register_play import (delete_logged_play, list_played_games,
-                                        log_play_to_bgg, register_to_bgg)
-from game_scanner.schemas import (BGGIdReuqest, LogDeletionRequest, LogRequest,
-                                  LogsFilter, PlayRequest, WishlistRequest)
+from game_scanner.play_payload_management import (
+    get_bgg_id,
+    get_extra_info,
+    play_request_to_md,
+)
+from game_scanner.register_play import (
+    delete_logged_play,
+    list_played_games,
+    log_play_to_bgg,
+    register_to_bgg,
+)
+from game_scanner.schemas import (
+    BGGIdReuqest,
+    LogDeletionRequest,
+    LogRequest,
+    LogsFilter,
+    PlayRequest,
+    WishlistRequest,
+)
 
 func_map = {
     "log_game": log_play_to_bgg,
@@ -36,7 +49,7 @@ def parse_chat(messages: list[dict], message_id: int = 0):
         except openai.RateLimitError as e:
             logger.error(e)
             answer = "Rate limit exceeded. Am I in trouble? (•̪ o •̪)"
-            return answer
+            return messages, answer
         if params_raw is not None:
             messages.append(
                 {
@@ -62,23 +75,7 @@ def parse_chat(messages: list[dict], message_id: int = 0):
             "content": text,
         }
     )
-    save_document(
-        {"message_id": message_id, "messages": messages}, collection_name="messages"
-    )
-    return text
-
-    #  play_request = PlayRequest(**params)
-    #  data = play_request.model_dump()
-    #  extra_info = get_extra_info(play_request)
-    #  data.update(extra_info)
-    #  play_request_md = play_request_to_md(data)
-    #  data["message_id"] = message_id
-    #  save_document(data, collection_name="play_requests")
-    #  answer = play_request_md
-
-    #  r = register_to_bgg(play_payload.model_dump())
-    #  print(payload_to_md(play_payload))
-    return answer
+    return messages, text
 
 
 def get_processing_prompt(messages: list[dict]):
