@@ -83,8 +83,8 @@ def perform_step(message):
         previous_messages = retrieve_messages(previous_message_id)
         messages = previous_messages + messages
     try:
-        messages, answer = parse_chat(messages, message_id=message.id)
-    except NoGoogleMatchesError as e:
+        messages, answer = parse_chat(messages)
+    except Exception as e:
         bot.reply_to(message, str(e))
         return
     #  button_spike = telebot.types.InlineKeyboardButton(

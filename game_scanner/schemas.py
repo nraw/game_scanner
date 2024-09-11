@@ -55,6 +55,10 @@ class BGGIdReuqest(BaseModel):
     game: str = Field(..., description="Name of the game")
 
 
+class MyGamesFilter(BaseModel):
+    player_count: Optional[int] = Field(..., description="Number of players")
+
+
 class LogDeletionRequest(BaseModel):
     play_id: int = Field(..., description="ID of the play to delete")
 

@@ -7,25 +7,14 @@ from loguru import logger
 
 from game_scanner.add_wishlist import add_wishlist
 from game_scanner.db import save_document
-from game_scanner.play_payload_management import (
-    get_bgg_id,
-    get_extra_info,
-    play_request_to_md,
-)
-from game_scanner.register_play import (
-    delete_logged_play,
-    list_played_games,
-    log_play_to_bgg,
-    register_to_bgg,
-)
-from game_scanner.schemas import (
-    BGGIdReuqest,
-    LogDeletionRequest,
-    LogRequest,
-    LogsFilter,
-    PlayRequest,
-    WishlistRequest,
-)
+from game_scanner.list_my_games import get_my_games
+from game_scanner.play_payload_management import (get_bgg_id, get_extra_info,
+                                                  play_request_to_md)
+from game_scanner.register_play import (delete_logged_play, list_played_games,
+                                        log_play_to_bgg, register_to_bgg)
+from game_scanner.schemas import (BGGIdReuqest, LogDeletionRequest, LogRequest,
+                                  LogsFilter, MyGamesFilter, PlayRequest,
+                                  WishlistRequest)
 
 func_map = {
     "log_game": log_play_to_bgg,
@@ -33,10 +22,11 @@ func_map = {
     "get_bgg_id": get_bgg_id,
     "list_played_games": list_played_games,
     "delete_play": delete_logged_play,
+    "list_my_games": get_my_games,
 }
 
 
-def parse_chat(messages: list[dict], message_id: int = 0):
+def parse_chat(messages: list[dict]):
     client = openai.OpenAI(
         api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_BASE_URL"]
     )
@@ -188,6 +178,14 @@ def get_all_tools():
                 "description": "Remove a play log from BoardGameGeek. Needs log_id which is obtained from list_played_games. Always ask for confirmation before executing this function.",
                 "name": "delete_play",
                 "parameters": LogDeletionRequest.model_json_schema(),
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "description": "List all games in my collection. If player_count is provided, it will filter the games by the number of players.",
+                "name": "list_my_games",
+                "parameters": MyGamesFilter.model_json_schema(),
             },
         },
     ]

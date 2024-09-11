@@ -11,6 +11,12 @@ def test_parse_chat():
     messages = [
         {
             "role": "user",
+            "content": "What are some solo games I own?",
+        }
+    ]
+    messages = [
+        {
+            "role": "user",
             "content": "When is the last time I played spirit island?",
         }
     ]
