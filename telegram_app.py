@@ -55,6 +55,7 @@ def send_play(message):
 @bot.message_handler(commands=["version"])
 def get_sha(message):
     logger.info(message)
+    bot.send_chat_action(message.chat.id, "typing")
     sha = os.popen("git rev-parse HEAD").read().strip()
     bot.reply_to(message, str(sha))
 
@@ -66,6 +67,7 @@ def next_step(message: telebot.types.Message):
 
 
 def perform_step(message):
+    bot.send_chat_action(message.chat.id, "typing")
     user_id = message.from_user.id
     #  chat_id = message.chat.id
     is_user, credit = check_is_user(user_id)
