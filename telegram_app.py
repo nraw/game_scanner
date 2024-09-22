@@ -113,4 +113,7 @@ def perform_step(message):
 
 
 if __name__ == "__main__":
+    sha = os.popen("git rev-parse HEAD").read().strip()
+    message = f"Chief, I'm up and running! (≧ω≦)ゞ\nSHA: {sha}"
+    bot.send_message(chat_id=os.getenv("TELEGRAM_CHAT_ID", -4108154376), text=message)
     bot.infinity_polling()
