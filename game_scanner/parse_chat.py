@@ -8,26 +8,13 @@ from loguru import logger
 from game_scanner.add_wishlist import add_wishlist
 from game_scanner.db import save_document
 from game_scanner.list_my_games import get_my_games
-from game_scanner.play_payload_management import (
-    get_bgg_id,
-    get_extra_info,
-    play_request_to_md,
-)
-from game_scanner.register_play import (
-    delete_logged_play,
-    list_played_games,
-    log_play_to_bgg,
-    register_to_bgg,
-)
-from game_scanner.schemas import (
-    BGGIdReuqest,
-    LogDeletionRequest,
-    LogRequest,
-    LogsFilter,
-    MyGamesFilter,
-    PlayRequest,
-    WishlistRequest,
-)
+from game_scanner.play_payload_management import (get_bgg_id, get_extra_info,
+                                                  play_request_to_md)
+from game_scanner.register_play import (delete_logged_play, list_played_games,
+                                        log_play_to_bgg, register_to_bgg)
+from game_scanner.schemas import (BGGIdReuqest, LogDeletionRequest, LogRequest,
+                                  LogsFilter, MyGamesFilter, PlayRequest,
+                                  WishlistRequest)
 
 func_map = {
     "log_game": log_play_to_bgg,
@@ -89,7 +76,7 @@ def reply_with_last_bot_query(bot, message, messages):
             break
     if last_bot_query:
         pretty_last_bot_query = "```\n" + last_bot_query + "\n```"
-        bot.reply_to(message, pretty_last_bot_query)
+        bot.send_message(chat_id=message.id, text=pretty_last_bot_query)
 
 
 def get_processing_prompt(messages: list[dict]):
