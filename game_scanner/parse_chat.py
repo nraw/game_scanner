@@ -32,40 +32,50 @@ def parse_chat(messages: list[dict]):
     )
     text = None
     params_raw = None
-    while text is None:
-        gpt_messages = get_processing_prompt(messages)
-        try:
-            text, params_raw = ping_gpt(client, gpt_messages)
-        except openai.RateLimitError as e:
-            logger.error(e)
-            answer = "Rate limit exceeded. Am I in trouble? (•̪ o •̪)"
-            return messages, answer
-        if params_raw is not None:
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": f"Function call: {params_raw}",
-                }
-            )
-            logger.info(f"Function call: {params_raw}")
-            params = json.loads(params_raw.arguments)
-            func_name = params_raw.name
-            func = func_map[func_name]
-            output = func(**params)
-            messages.append(
-                {
-                    "role": "system",
-                    "content": f"Function output: {output}",
-                }
-            )
-            logger.info(f"Function output: {output}")
-    messages.append(
-        {
-            "role": "assistant",
-            "content": text,
-        }
-    )
+    gpt_messages = get_processing_prompt(messages)
+    try:
+        text, params_raw = ping_gpt(client, gpt_messages)
+    except openai.RateLimitError as e:
+        logger.error(e)
+        answer = "Rate limit exceeded. Am I in trouble? (•̪ o •̪)"
+        return messages, answer
+    if params_raw is not None:
+        messages.append(
+            {
+                "role": "assistant",
+                "content": f"Function call: {params_raw}",
+            }
+        )
+        logger.info(f"Function call: {params_raw}")
+        params = json.loads(params_raw.arguments)
+        func_name = params_raw.name
+        func = func_map[func_name]
+        output = func(**params)
+        messages.append(
+            {
+                "role": "system",
+                "content": f"Function output: {output}",
+            }
+        )
+        logger.info(f"Function output: {output}")
+    else:
+        messages.append(
+            {
+                "role": "assistant",
+                "content": text,
+            }
+        )
     return messages, text
+
+
+def reply_with_last_bot_query(bot, message, messages):
+    last_bot_query = None
+    for m in reversed(messages):
+        if m["role"] == "assistant":
+            last_bot_query = m["content"]
+            break
+    if last_bot_query:
+        bot.reply_to(message, last_bot_query)
 
 
 def get_processing_prompt(messages: list[dict]):

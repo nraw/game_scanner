@@ -6,7 +6,7 @@ from loguru import logger
 from game_scanner.commands import set_it, spike_it
 from game_scanner.db import retrieve_messages, save_document
 from game_scanner.errors import NoGoogleMatchesError
-from game_scanner.parse_chat import parse_chat
+from game_scanner.parse_chat import parse_chat, reply_with_last_bot_query
 from game_scanner.telegram_utils import check_is_user
 
 bot = telebot.TeleBot(os.environ["TELEGRAM_TOKEN"], parse_mode="Markdown")
@@ -85,7 +85,13 @@ def perform_step(message):
         previous_messages = retrieve_messages(previous_message_id)
         messages = previous_messages + messages
     try:
-        messages, answer = parse_chat(messages)
+        answer = None
+        while answer is None:
+            messages, answer = parse_chat(messages)
+            if answer is None:
+                reply = reply_with_last_bot_query(bot, message, messages)
+        reply = bot.reply_to(message, str(answer))
+
     except Exception as e:
         bot.reply_to(message, str(e))
         return
@@ -95,10 +101,11 @@ def perform_step(message):
     #  button_set = telebot.types.InlineKeyboardButton(
     #      "Set it!", callback_data="wl-" + str(message.id)
     #  )
-    keyboard = telebot.types.InlineKeyboardMarkup()
+    #  keyboard = telebot.types.InlineKeyboardMarkup()
     #  keyboard.add(button_spike)
     #  keyboard.add(button_set)
-    reply = bot.reply_to(message, str(answer), reply_markup=keyboard)
+    #  reply = bot.reply_to(message, str(answer), reply_markup=keyboard)
+    reply = bot.reply_to(message, str(answer))
     reply_id = reply.id
     save_document(
         {"message_id": reply_id, "messages": messages}, collection_name="messages"
