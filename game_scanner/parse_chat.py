@@ -167,7 +167,7 @@ def get_all_tools():
         {
             "type": "function",
             "function": {
-                "description": "Get the list of played games. Returns their log_id, name, play date and comment",
+                "description": "Get the list of played games. Returns their log_id, name, play date and comment. You can further filter the results by game_ids, last_n and since. Only do so if explicitly asked by the user. For the game_ids, you will need to first obtain the BoardGameGeek ID of the games.",
                 "name": "list_played_games",
                 "parameters": LogsFilter.model_json_schema(),
             },

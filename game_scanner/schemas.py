@@ -64,6 +64,7 @@ class LogDeletionRequest(BaseModel):
 
 
 class LogsFilter(BaseModel):
+    game_ids: Optional[list] = Field(None, description="List of BoardGameGeek IDs")
     last_n: Optional[int] = Field(
         None, description="Number of logs to return. Format YYYY-MM-DD"
     )

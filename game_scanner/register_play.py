@@ -2,7 +2,7 @@ import json
 import os
 import xml.etree.ElementTree as ET
 from datetime import date, datetime
-from typing import Optional
+from typing import List, Optional
 
 import requests
 
@@ -88,7 +88,11 @@ def get_play_payload(game_id):
     return play_payload
 
 
-def get_logged_plays(last_n: Optional[int] = None, since: Optional[str] = None):
+def get_logged_plays(
+    game_ids: Optional[List[int]] = None,
+    last_n: Optional[int] = None,
+    since: Optional[str] = None,
+):
     # User name
     username = os.environ["BGG_USERNAME"]
 
@@ -104,9 +108,10 @@ def get_logged_plays(last_n: Optional[int] = None, since: Optional[str] = None):
     # Creating ElementTree object
     root = ET.fromstring(response.content)
     plays = []
+    i = 0
 
     # Parse the XML and find the plays
-    for i, play in enumerate(root.findall("play")):
+    for play in root.findall("play"):
         if last_n and i >= last_n:
             break
         if since is not None:
@@ -119,6 +124,8 @@ def get_logged_plays(last_n: Optional[int] = None, since: Optional[str] = None):
         if game_item:
             game = game_item.get("name")
             game_id = game_item.get("objectid")  # added line to get game_ids
+            if game_ids and int(game_id) not in game_ids:
+                continue
         else:
             raise ValueError
         comments = play.find("comments")
