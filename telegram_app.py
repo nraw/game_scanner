@@ -86,10 +86,12 @@ def perform_step(message):
         messages = previous_messages + messages
     try:
         answer = None
-        while answer is None:
+        i = 0
+        while answer is None and i < 10:
             messages, answer = parse_chat(messages)
             if answer is None:
                 reply = reply_with_last_bot_query(bot, message, messages)
+            i += 1
         reply = bot.reply_to(message, str(answer))
 
     except Exception as e:
