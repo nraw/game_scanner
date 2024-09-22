@@ -107,7 +107,6 @@ def perform_step(message):
     #  keyboard.add(button_spike)
     #  keyboard.add(button_set)
     #  reply = bot.reply_to(message, str(answer), reply_markup=keyboard)
-    reply = bot.reply_to(message, str(answer))
     reply_id = reply.id
     save_document(
         {"message_id": reply_id, "messages": messages}, collection_name="messages"
