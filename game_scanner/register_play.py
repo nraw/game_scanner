@@ -93,47 +93,49 @@ def get_logged_plays(
     last_n: Optional[int] = None,
     since: Optional[str] = None,
 ):
-    # User name
     username = os.environ["BGG_USERNAME"]
-
-    # REST API URL to fetch all plays of a user
-    url = f"https://www.boardgamegeek.com/xmlapi2/plays?username={username}"
-
-    # Sending HTTP request
-    response = requests.get(url)
-
-    # raising exception in case of bad requests
-    response.raise_for_status()
-
-    # Creating ElementTree object
-    root = ET.fromstring(response.content)
+    base_url = f"https://www.boardgamegeek.com/xmlapi2/plays?username={username}"
     plays = []
-    i = 0
+    page = 1
 
-    # Parse the XML and find the plays
-    for play in root.findall("play"):
-        if last_n and i >= last_n:
+    while True:
+        url = f"{base_url}&page={page}"
+        response = requests.get(url)
+        response.raise_for_status()
+        root = ET.fromstring(response.content)
+        all_plays = root.findall("play")
+
+        if not all_plays:
             break
-        if since is not None:
-            play_date = play.get("date", "")
-            if play_date < since:
+
+        i = 0
+        for play in all_plays:
+            if last_n and i >= last_n:
                 break
-        play_id = play.get("id")
-        date = play.get("date")
-        game_item = play.find("item")
-        if game_item:
-            game = game_item.get("name")
-            game_id = game_item.get("objectid")  # added line to get game_ids
-            if game_ids and int(game_id) not in game_ids:
-                continue
-        else:
-            raise ValueError
-        comments = play.find("comments")
-        comment = comments.text if comments else None
-        play_info = dict(
-            play_id=play_id, date=date, game=game, game_id=game_id, comment=comment
-        )
-        plays.append(play_info)
+            if since is not None:
+                play_date = play.get("date", "")
+                if play_date < since:
+                    break
+            play_id = play.get("id")
+            date = play.get("date")
+            game_item = play.find("item")
+            if game_item:
+                game = game_item.get("name")
+                game_id = game_item.get("objectid")
+                if game_ids and int(game_id) not in game_ids:
+                    continue
+            else:
+                raise ValueError
+            comments = play.find("comments")
+            comment = comments.text if comments else None
+            play_info = dict(
+                play_id=play_id, date=date, game=game, game_id=game_id, comment=comment
+            )
+            plays.append(play_info)
+            i += 1
+
+        page += 1
+
     return plays
 
 
