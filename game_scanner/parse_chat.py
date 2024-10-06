@@ -155,7 +155,7 @@ def get_all_tools():
         {
             "type": "function",
             "function": {
-                "description": "Add a log of a play",
+                "description": "Add a log of a play. If no additional details are provided for the parameters, assume defaults.",
                 "name": "log_game",
                 "parameters": LogRequest.model_json_schema(),
             },
