@@ -76,8 +76,7 @@ def reply_with_last_bot_query(bot, message, messages):
             break
     if last_bot_query:
         pretty_last_bot_query = "```\n" + last_bot_query + "\n```"
-        #  bot.send_message(chat_id=message.chat.id, text=pretty_last_bot_query)
-        bot.reply_to(message, pretty_last_bot_query)
+        bot.send_message(chat_id=message.chat.id, text=pretty_last_bot_query)
 
 
 def get_processing_prompt(messages: list[dict]):
