@@ -100,6 +100,8 @@ def get_logged_plays(
 
     while True:
         url = f"{base_url}&page={page}"
+        if since is not None:
+            url += f"&mindate={since}"
         response = requests.get(url)
         response.raise_for_status()
         root = ET.fromstring(response.content)
@@ -127,7 +129,7 @@ def get_logged_plays(
             else:
                 raise ValueError
             comments = play.find("comments")
-            comment = comments.text if comments else None
+            comment = comments.text if comments is not None else None
             play_info = dict(
                 play_id=play_id, date=date, game=game, game_id=game_id, comment=comment
             )

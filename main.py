@@ -1,18 +1,22 @@
 import os
 
 import telebot
-from flask import redirect, render_template
+from flask import Request, redirect, render_template
 from loguru import logger
 
 from game_scanner.barcode2bgg import barcode2bgg
+from game_scanner.commands import process_register_response
 from game_scanner.db import retrieve_document
 from game_scanner.register_play import register_play
 from game_scanner.save_bgg_id import save_bgg_id
-from game_scanner.spikes import process_register_response
 
 
-def main(request):
-    request_args = request.args.to_dict()
+def main(request: Request):
+    logger.info(request)
+    if request.method == "GET":
+        request_args = request.args.to_dict()
+    else:
+        request_args = request.form.to_dict()
     logger.info(request_args)
     query = request_args.get("query")
     logger.info(query)
