@@ -6,6 +6,7 @@ from typing import List, Optional
 
 import requests
 
+from game_scanner.commands import update_my_board_games
 from game_scanner.schemas import PlayPayload
 
 
@@ -16,6 +17,10 @@ def log_play_to_bgg(**play_payload_raw):
     if r.status_code != 200:
         error_message = f"Failed to log play: {r.text}"
         return error_message
+    try:
+        update_my_board_games()
+    except Exception as e:
+        error_message = f"Failed to update my_board_games: {e}"
     response_text = f"Successfully logged play: {play_payload}"
     return response_text
 
