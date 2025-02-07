@@ -5,8 +5,8 @@ from datetime import date, datetime
 from typing import List, Optional
 
 import requests
+from loguru import logger
 
-from game_scanner.commands import update_my_board_games
 from game_scanner.schemas import PlayPayload
 
 
@@ -129,7 +129,11 @@ def get_logged_plays(
             if game_item:
                 game = game_item.get("name")
                 game_id = game_item.get("objectid")
-                if game_ids and int(game_id) not in game_ids:
+                if (
+                    game_ids is not None
+                    and game_id is not None
+                    and int(game_id) not in game_ids
+                ):
                     continue
             else:
                 raise ValueError
@@ -178,3 +182,19 @@ def get_delete_play_payload(play_id):
         "action": "delete",
     }
     return delete_play_payload
+
+
+def update_my_board_games():
+    try:
+        github_token = os.getenv("GH_TOKEN", "")
+        headers = {
+            "contentType": "application/json",
+            "Accept": "application/vnd.github.v3+json",
+            "Authorization": "token " + github_token,
+        }
+        data = {"event_type": "webhook"}
+        url = "https://api.github.com/repos/nraw/my_board_games/dispatches"
+        r = requests.post(url, headers=headers, json=data)
+        logger.info(f"Triggered update to my_board_games: {r.status_code}")
+    except:
+        logger.error("Failed to update my_board_games")
