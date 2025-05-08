@@ -8,13 +8,26 @@ from loguru import logger
 from game_scanner.add_wishlist import add_wishlist
 from game_scanner.db import save_document
 from game_scanner.list_my_games import get_my_games
-from game_scanner.play_payload_management import (get_bgg_id, get_extra_info,
-                                                  play_request_to_md)
-from game_scanner.register_play import (delete_logged_play, list_played_games,
-                                        log_play_to_bgg, register_to_bgg)
-from game_scanner.schemas import (BGGIdReuqest, LogDeletionRequest, LogRequest,
-                                  LogsFilter, MyGamesFilter, PlayRequest,
-                                  WishlistRequest)
+from game_scanner.play_payload_management import (
+    get_bgg_id,
+    get_extra_info,
+    play_request_to_md,
+)
+from game_scanner.register_play import (
+    delete_logged_play,
+    list_played_games,
+    log_play_to_bgg,
+    register_to_bgg,
+)
+from game_scanner.schemas import (
+    BGGIdReuqest,
+    LogDeletionRequest,
+    LogRequest,
+    LogsFilter,
+    MyGamesFilter,
+    PlayRequest,
+    WishlistRequest,
+)
 
 func_map = {
     "log_game": log_play_to_bgg,
@@ -117,8 +130,8 @@ def ping_gpt(client, gpt_messages):
     chat_completion = client.chat.completions.create(
         messages=gpt_messages,
         #  model="gpt-3.5-turbo",
-        #  model="gpt-4o-mini",
-        model="gpt-4o",
+        model="gpt-4o-mini",
+        #  model="gpt-4o",
         tools=tools,
         tool_choice=tool_choice,
     )
