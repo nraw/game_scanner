@@ -257,48 +257,24 @@ class handler(BaseHTTPRequestHandler):
         return barcode2bgg(query)
     
     def _send_html_form(self):
-        html_form = """
-<!DOCTYPE html>
-<html>
-<head><title>Game Scanner API</title></head>
-<body>
-    <h1>Game Scanner API</h1>
-    
-    <h2>Quick Lookup (Free)</h2>
-    <form method="post">
-        <label>Barcode/Query: <input type="text" name="query" required></label><br><br>
-        <label>BGG ID (optional): <input type="text" name="bgg_id"></label><br><br>
-        <label>Game Name (optional): <input type="text" name="bg_name"></label><br><br>
-        <input type="checkbox" name="redirect"> Redirect to BGG<br><br>
-        <input type="submit" value="Look Up Game">
-    </form>
-    
-    <hr>
-    
-    <h2>API Endpoints</h2>
-    <ul>
-        <li><strong>GET /lookup?query=BARCODE</strong> - Look up game by barcode (free)</li>
-        <li><strong>GET /play?query=BARCODE&api_key=YOUR_KEY</strong> - Register play (requires API key)</li>
-        <li><strong>POST /register</strong> - Register new user account</li>
-    </ul>
-    
-    <h2>Register for API Access</h2>
-    <form method="post" action="/register">
-        <label>BGG Username: <input type="text" name="bgg_username" required></label><br><br>
-        <label>BGG Password: <input type="password" name="bgg_password" required></label><br><br>
-        <input type="submit" value="Register">
-    </form>
-    
-    <h2>Examples</h2>
-    <p><strong>Free lookup:</strong><br>
-    <code>curl "https://gamescanner.vercel.app/lookup?query=nemesis"</code></p>
-    
-    <p><strong>Register play:</strong><br>
-    <code>curl "https://gamescanner.vercel.app/play?query=nemesis&api_key=YOUR_API_KEY"</code></p>
-</body>
-</html>
-        """
-        self._send_response(html_form, 'text/html')
+        try:
+            # Read the HTML file from the same directory
+            html_file_path = os.path.join(os.path.dirname(__file__), 'index.html')
+            with open(html_file_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+            self._send_response(html_content, 'text/html')
+        except FileNotFoundError:
+            # Fallback to simple HTML if file not found
+            fallback_html = """
+            <h1>Game Scanner API</h1>
+            <p>HTML template not found. Please use the API endpoints directly:</p>
+            <ul>
+                <li>GET /lookup?query=BARCODE</li>
+                <li>GET /play?query=BARCODE&api_key=YOUR_KEY</li>
+                <li>POST /register</li>
+            </ul>
+            """
+            self._send_response(fallback_html, 'text/html')
     
     def _send_json(self, data, status=200):
         self._send_response(json.dumps(data), 'application/json', status)

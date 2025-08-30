@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Scanner API - Board Game Barcode Lookup & Play Registration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+        .api-endpoint { background: #f8fafc; border-left: 4px solid #4f46e5; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white">
+        <div class="container mx-auto px-6 py-8">
+            <div class="text-center">
+                <div class="flex items-center justify-center mb-4">
+                    <i class="fas fa-qrcode text-4xl mr-3"></i>
+                    <h1 class="text-4xl font-bold">Game Scanner API</h1>
+                </div>
+                <p class="text-xl opacity-90">Convert board game barcodes to BoardGameGeek IDs and register plays automatically</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-12">
+        <!-- Quick Start Cards -->
+        <div class="grid md:grid-cols-2 gap-8 mb-12">
+            <!-- Free Lookup Card -->
+            <div class="bg-white rounded-xl shadow-lg p-8 card-hover">
+                <div class="flex items-center mb-6">
+                    <div class="bg-green-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-search text-green-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Free Lookup</h2>
+                        <p class="text-gray-600">No registration required</p>
+                    </div>
+                </div>
+                
+                <form method="post" class="space-y-6">
+                    <div>
+                        <label for="query" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-barcode mr-2"></i>Barcode or Game Name
+                        </label>
+                        <input type="text" 
+                               id="query"
+                               name="query" 
+                               required 
+                               placeholder="e.g., 634482735077 or Nemesis"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="bgg_id" class="block text-sm font-medium text-gray-700 mb-2">BGG ID (Optional)</label>
+                            <input type="text" 
+                                   id="bgg_id"
+                                   name="bgg_id" 
+                                   placeholder="167355"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label for="bg_name" class="block text-sm font-medium text-gray-700 mb-2">Game Name (Optional)</label>
+                            <input type="text" 
+                                   id="bg_name"
+                                   name="bg_name" 
+                                   placeholder="Nemesis"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" 
+                               id="redirect" 
+                               name="redirect" 
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="redirect" class="ml-2 text-sm text-gray-700">
+                            <i class="fas fa-external-link-alt mr-1"></i>Redirect to BGG page
+                        </label>
+                    </div>
+                    
+                    <button type="submit" 
+                            class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg transition duration-300 transform hover:scale-105">
+                        <i class="fas fa-search mr-2"></i>Look Up Game
+                    </button>
+                </form>
+            </div>
+
+            <!-- API Registration Card -->
+            <div class="bg-white rounded-xl shadow-lg p-8 card-hover">
+                <div class="flex items-center mb-6">
+                    <div class="bg-blue-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-key text-blue-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Get API Access</h2>
+                        <p class="text-gray-600">Register plays to your BGG account</p>
+                    </div>
+                </div>
+                
+                <form method="post" action="/register" class="space-y-6">
+                    <div>
+                        <label for="bgg_username" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-user mr-2"></i>BoardGameGeek Username
+                        </label>
+                        <input type="text" 
+                               id="bgg_username"
+                               name="bgg_username" 
+                               required 
+                               placeholder="your_bgg_username"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <div>
+                        <label for="bgg_password" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-lock mr-2"></i>BoardGameGeek Password
+                        </label>
+                        <input type="password" 
+                               id="bgg_password"
+                               name="bgg_password" 
+                               required 
+                               placeholder="Your BGG password"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-shield-alt mr-1"></i>Securely encrypted and stored
+                        </p>
+                    </div>
+                    
+                    <button type="submit" 
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition duration-300 transform hover:scale-105">
+                        <i class="fas fa-user-plus mr-2"></i>Register for API Access
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- API Documentation -->
+        <div class="bg-white rounded-xl shadow-lg p-8 mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-8 flex items-center">
+                <i class="fas fa-code mr-3"></i>API Endpoints
+            </h2>
+            
+            <div class="space-y-6">
+                <!-- Lookup Endpoint -->
+                <div class="api-endpoint p-6 rounded-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium mr-3">GET</span>
+                            <code class="text-lg font-mono text-gray-800">/lookup</code>
+                        </div>
+                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">FREE</span>
+                    </div>
+                    <p class="text-gray-600 mb-4">Convert barcode or game name to BGG ID</p>
+                    <div class="bg-gray-800 rounded-lg p-4 overflow-x-auto">
+                        <code class="text-green-400 text-sm">curl "https://gamescanner.vercel.app/lookup?query=nemesis"</code>
+                    </div>
+                </div>
+
+                <!-- Play Registration Endpoint -->
+                <div class="api-endpoint p-6 rounded-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium mr-3">GET</span>
+                            <code class="text-lg font-mono text-gray-800">/play</code>
+                        </div>
+                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-medium">API KEY REQUIRED</span>
+                    </div>
+                    <p class="text-gray-600 mb-4">Register a play to your BGG account</p>
+                    <div class="bg-gray-800 rounded-lg p-4 overflow-x-auto">
+                        <code class="text-green-400 text-sm">curl "https://gamescanner.vercel.app/play?query=nemesis&api_key=YOUR_API_KEY"</code>
+                    </div>
+                </div>
+
+                <!-- Registration Endpoint -->
+                <div class="api-endpoint p-6 rounded-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium mr-3">POST</span>
+                            <code class="text-lg font-mono text-gray-800">/register</code>
+                        </div>
+                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">FREE</span>
+                    </div>
+                    <p class="text-gray-600 mb-4">Create a new user account and get your API key</p>
+                    <div class="bg-gray-800 rounded-lg p-4 overflow-x-auto">
+                        <code class="text-green-400 text-sm">curl -X POST "https://gamescanner.vercel.app/register" -d "bgg_username=USERNAME&bgg_password=PASSWORD"</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="grid md:grid-cols-3 gap-8 mb-12">
+            <div class="bg-white rounded-xl shadow-lg p-6 text-center card-hover">
+                <div class="bg-green-100 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                    <i class="fas fa-bolt text-green-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Lightning Fast</h3>
+                <p class="text-gray-600">Instant barcode recognition and BGG lookup using Google Search API</p>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 text-center card-hover">
+                <div class="bg-blue-100 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                    <i class="fas fa-shield-alt text-blue-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Secure & Private</h3>
+                <p class="text-gray-600">BGG credentials encrypted with AES-128.</p>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 text-center card-hover">
+                <div class="bg-purple-100 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                    <i class="fas fa-gamepad text-purple-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Personal Plays</h3>
+                <p class="text-gray-600">Plays register directly to your BGG account, not a shared service account</p>
+            </div>
+        </div>
+
+        <!-- Usage Examples -->
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">
+                <i class="fas fa-lightbulb mr-3"></i>Usage Examples
+            </h2>
+            
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-search text-green-600 mr-2"></i>Quick Lookup
+                    </h3>
+                    <div class="space-y-3 text-sm">
+                        <p><strong>By Barcode:</strong> <code class="bg-gray-200 px-2 py-1 rounded">634482735077</code></p>
+                        <p><strong>By Name:</strong> <code class="bg-gray-200 px-2 py-1 rounded">nemesis</code></p>
+                        <p><strong>With Redirect:</strong> Add <code class="bg-gray-200 px-2 py-1 rounded">&redirect=1</code></p>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-gamepad text-blue-600 mr-2"></i>Play Registration
+                    </h3>
+                    <div class="space-y-3 text-sm">
+                        <p><strong>1.</strong> Register to get your API key</p>
+                        <p><strong>2.</strong> Scan barcode or search by name</p>
+                        <p><strong>3.</strong> Use <code class="bg-gray-200 px-2 py-1 rounded">/play</code> endpoint with your key</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="container mx-auto px-6 text-center">
+            <p class="mb-4">&copy; 2025 Game Scanner API. Built for board game enthusiasts.</p>
+            <div class="flex justify-center space-x-6">
+                <a href="https://github.com/nraw/game_scanner" class="hover:text-gray-300 transition duration-300">
+                    <i class="fab fa-github text-xl"></i>
+                </a>
+                <a href="https://boardgamegeek.com" class="hover:text-gray-300 transition duration-300">
+                    <i class="fas fa-dice text-xl"></i>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript for form enhancements -->
+    <script>
+        // Add loading states to forms
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+                submitBtn.disabled = true;
+                
+                // Re-enable after 5 seconds as fallback
+                setTimeout(() => {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }, 5000);
+            });
+        });
+    </script>
+</body>
+</html>
