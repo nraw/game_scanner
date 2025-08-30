@@ -1,0 +1,11 @@
+# Files to ignore during Vercel deployment
+.env
+nraw-key.json
+__pycache__/
+*.pyc
+tests/
+.git/
+Dockerfile
+Procfile
+Makefile
+*cache/
