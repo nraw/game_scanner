@@ -5,3 +5,4 @@ loguru
 firebase-admin
 pyTelegramBotAPI
 openai
+cryptography

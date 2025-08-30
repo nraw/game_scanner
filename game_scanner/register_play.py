@@ -25,9 +25,9 @@ def log_play_to_bgg(**play_payload_raw):
     return response_text
 
 
-def register_play(game_id):
+def register_play(game_id, username=None, password=None):
     play_payload = get_play_payload(game_id)
-    register_to_bgg(play_payload)
+    return register_to_bgg(play_payload, username, password)
 
 
 def list_played_games(**logs_filter):
@@ -35,9 +35,10 @@ def list_played_games(**logs_filter):
     return plays
 
 
-def register_to_bgg(play_payload):
-    username = os.environ["BGG_USERNAME"]
-    password = os.environ["BGG_PASS"]
+def register_to_bgg(play_payload, username=None, password=None):
+    # Use provided credentials or fall back to environment variables
+    username = username or os.environ["BGG_USERNAME"]
+    password = password or os.environ["BGG_PASS"]
 
     login_payload = {"credentials": {"username": username, "password": password}}
     headers = {"content-type": "application/json"}

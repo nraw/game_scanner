@@ -35,14 +35,14 @@ def decrypt_credentials(encrypted_creds: str, encryption_key: bytes) -> Tuple[st
     return username, password
 
 
-def create_user(email: str, bgg_username: str, bgg_password: str) -> str:
+def create_user(bgg_username: str, bgg_password: str) -> str:
     """Create a new user with encrypted BGG credentials."""
     users_collection = get_collection("users")
     
     # Check if user already exists
-    existing_user = users_collection.where("email", "==", email).limit(1).get()
-    if existing_user:
-        raise ValueError("User already exists")
+    existing_user = users_collection.where("bgg_username", "==", bgg_username).limit(1).get()
+    if list(existing_user):
+        raise ValueError("BGG username already registered")
     
     # Generate API key and encryption key
     api_key = generate_api_key()
@@ -53,7 +53,7 @@ def create_user(email: str, bgg_username: str, bgg_password: str) -> str:
     
     # Store user data
     user_data = {
-        "email": email,
+        "bgg_username": bgg_username,
         "api_key": api_key,
         "encrypted_credentials": encrypted_creds,
         "encryption_key": base64.b64encode(encryption_key).decode(),
@@ -64,7 +64,7 @@ def create_user(email: str, bgg_username: str, bgg_password: str) -> str:
     # Use API key as document ID for easy lookup
     users_collection.document(api_key).set(user_data)
     
-    logger.info(f"Created user with email {email}")
+    logger.info(f"Created user with BGG username {bgg_username}")
     return api_key
 
 
@@ -112,7 +112,7 @@ def list_all_users() -> list:
         # Don't return sensitive data
         users.append({
             "api_key": doc.id,
-            "email": user_data.get("email"),
+            "bgg_username": user_data.get("bgg_username"),
             "tier": user_data.get("tier"),
             "created_at": user_data.get("created_at")
         })
