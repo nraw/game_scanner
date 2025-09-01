@@ -6,7 +6,11 @@ from loguru import logger
 from game_scanner.commands import set_it, spike_it
 from game_scanner.db import retrieve_messages, save_document
 from game_scanner.parse_chat import parse_chat, reply_with_last_bot_query
-from game_scanner.telegram_utils import check_is_user, register_telegram_user, get_user_by_telegram_id
+from game_scanner.telegram_utils import (
+    check_is_user,
+    get_user_by_telegram_id,
+    register_telegram_user,
+)
 
 bot = telebot.TeleBot(os.environ["TELEGRAM_TOKEN"], parse_mode="Markdown")
 
@@ -16,9 +20,9 @@ def send_welcome(message):
     logger.info(message)
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
-    
+
     is_user, credit = check_is_user(user_id)
-    
+
     if not is_user:
         welcome_text = f"""🎲 Hello {first_name}! Welcome to BGG Logger Bot!
 
@@ -26,7 +30,6 @@ I'm your personal board game assistant. I can help you:
 • 📋 Log plays to BoardGameGeek  
 • 📚 Manage your game collection
 • ❤️ Add games to your wishlist
-• 🔍 Find games by barcode scanning
 • 📊 Track your gaming statistics
 
 To get started, you'll need to connect your BoardGameGeek account:
@@ -35,18 +38,21 @@ To get started, you'll need to connect your BoardGameGeek account:
 /help - See all available commands
 
 Ready to level up your board gaming? 🚀"""
-        
+
         bot.reply_to(message, welcome_text)
         return
-    
+
     if credit <= 0:
-        bot.reply_to(message, f"Welcome back {first_name}! Unfortunately, you're out of credits. ⊙﹏⊙")
+        bot.reply_to(
+            message,
+            f"Welcome back {first_name}! Unfortunately, you're out of credits. ⊙﹏⊙",
+        )
         return
-    
+
     # Returning user
     user_data = get_user_by_telegram_id(user_id)
-    bgg_username = user_data.get('bgg_username', 'there') if user_data else 'there'
-    
+    bgg_username = user_data.get("bgg_username", "there") if user_data else "there"
+
     welcome_back_text = f"""🎲 Welcome back, {first_name}!
 
 Connected to BGG as: *{bgg_username}*
@@ -61,14 +67,14 @@ Quick actions:
 
 /commands - See all available features
 /help - Get detailed help"""
-    
+
     bot.reply_to(message, welcome_back_text)
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
     logger.info(call)
-    
+
     # Legacy callback handlers
     if call.data.startswith("pl"):
         bot.answer_callback_query(call.id, "You clicked on Spike it!")
@@ -80,7 +86,7 @@ def callback_query(call):
         message_id = int(call.data.split("-")[1])
         set_response = set_it(message_id)
         bot.reply_to(call.message, set_response)
-    
+
     # New command menu handlers
     elif call.data.startswith("cmd_"):
         handle_command_callback(call)
@@ -89,7 +95,7 @@ def callback_query(call):
 def handle_command_callback(call):
     """Handle callbacks from the /commands menu."""
     bot.answer_callback_query(call.id)
-    
+
     if call.data == "cmd_log_play":
         response = """📋 *Log a Play*
 
@@ -104,7 +110,7 @@ You can log plays in several ways:
 • `/play Wingspan`
 
 Just tell me about your game and I'll handle the rest! 🎲"""
-        
+
     elif call.data == "cmd_wishlist":
         response = """❤️ *Add to Wishlist*
 
@@ -116,7 +122,7 @@ Tell me which games you want to add:
 • "I want Wingspan"
 
 I'll find the game and add it to your BGG wishlist! 🎯"""
-        
+
     elif call.data == "cmd_collection":
         response = """📚 *Your Collection*
 
@@ -129,7 +135,7 @@ View and filter your games:
 • "What games do I own?"
 
 I'll show your collection with filtering options! 📖"""
-        
+
     elif call.data == "cmd_recent":
         response = """📊 *Recent Plays*
 
@@ -142,7 +148,7 @@ View your play history:
 • "Show plays of Wingspan"
 
 I can also help you delete plays if needed! 📈"""
-        
+
     elif call.data == "cmd_find":
         response = """🔍 *Find Games*
 
@@ -151,11 +157,10 @@ I can help you discover games:
 *Examples:*
 • "Tell me about Wingspan"
 • "Find games like Azul"
-• Send me a barcode photo
 • "Recommend games for 3 players"
 
 I'll use BoardGameGeek to find information! 🎮"""
-        
+
     elif call.data == "cmd_help":
         response = """❓ *Help & Tips*
 
@@ -171,10 +176,10 @@ I'll use BoardGameGeek to find information! 🎮"""
 • I can handle barcodes in photos
 
 Need more help? Just ask! 🤖"""
-    
+
     else:
         response = "Unknown command. Try /help for assistance."
-    
+
     bot.send_message(call.message.chat.id, response)
 
 
@@ -190,12 +195,15 @@ def handle_register(message):
     logger.info(message)
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
-    
+
     is_user, _ = check_is_user(user_id)
     if is_user:
-        bot.reply_to(message, f"You're already registered, {first_name}! 🎉\n\nUse /start to see your dashboard.")
+        bot.reply_to(
+            message,
+            f"You're already registered, {first_name}! 🎉\n\nUse /start to see your dashboard.",
+        )
         return
-    
+
     register_text = """🔗 Let's connect your BoardGameGeek account!
 
 *Option 1: Register with BGG credentials*
@@ -213,7 +221,7 @@ Example: `/register_with_api abc123xyz789...`
 ⚠️ *Security note:* Your credentials are encrypted and stored securely. I only use them to interact with BGG on your behalf.
 
 Don't have a BGG account yet? Create one at boardgamegeek.com first!"""
-    
+
     bot.reply_to(message, register_text)
 
 
@@ -222,24 +230,26 @@ def handle_register_with_bgg(message):
     logger.info(message)
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
-    
+
     # Parse the command arguments
     parts = message.text.split()
     if len(parts) != 3:
-        bot.reply_to(message, "❌ Please use the format: `/register_with_bgg USERNAME PASSWORD`")
+        bot.reply_to(
+            message, "❌ Please use the format: `/register_with_bgg USERNAME PASSWORD`"
+        )
         return
-    
+
     bgg_username = parts[1]
     bgg_password = parts[2]
-    
+
     # Delete the message for security
     try:
         bot.delete_message(message.chat.id, message.message_id)
     except Exception:
         pass  # Ignore if we can't delete
-    
+
     bot.send_chat_action(message.chat.id, "typing")
-    
+
     try:
         api_key = register_telegram_user(user_id, bgg_username, bgg_password)
         if api_key:
@@ -261,11 +271,14 @@ Your BGG account *{bgg_username}* is now connected.
 
 /help - See all commands
 /commands - Quick action menu"""
-            
+
             bot.send_message(message.chat.id, success_text)
         else:
-            bot.send_message(message.chat.id, "❌ Registration failed. Please check your BGG username and password, then try again.")
-    
+            bot.send_message(
+                message.chat.id,
+                "❌ Registration failed. Please check your BGG username and password, then try again.",
+            )
+
     except Exception as e:
         logger.error(f"Registration error: {e}")
         if "already registered" in str(e):
@@ -291,45 +304,54 @@ def handle_register_with_api(message):
     logger.info(message)
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
-    
+
     # Check if already registered
     is_user, _ = check_is_user(user_id)
     if is_user:
-        bot.reply_to(message, f"You're already registered, {first_name}! 🎉\n\nUse /start to see your dashboard.")
+        bot.reply_to(
+            message,
+            f"You're already registered, {first_name}! 🎉\n\nUse /start to see your dashboard.",
+        )
         return
-    
+
     # Parse the API key
     parts = message.text.split()
     if len(parts) != 2:
-        bot.reply_to(message, "❌ Please use the format: `/register_with_api YOUR_API_KEY`")
+        bot.reply_to(
+            message, "❌ Please use the format: `/register_with_api YOUR_API_KEY`"
+        )
         return
-    
+
     api_key = parts[1]
-    
+
     # Delete the message for security
     try:
         bot.delete_message(message.chat.id, message.message_id)
     except Exception:
         pass  # Ignore if we can't delete
-    
+
     bot.send_chat_action(message.chat.id, "typing")
-    
+
     try:
         # Verify the API key exists and get user data
         from game_scanner.user_auth import get_user_by_api_key
+
         user_data = get_user_by_api_key(api_key)
-        
+
         if not user_data:
-            bot.send_message(message.chat.id, "❌ Invalid API key. Please check and try again.")
+            bot.send_message(
+                message.chat.id, "❌ Invalid API key. Please check and try again."
+            )
             return
-        
+
         # Link this Telegram user to the existing account
         from game_scanner.db import get_collection
+
         users_collection = get_collection("users")
         user_doc = users_collection.document(api_key)
         user_doc.update({"telegram_user_id": user_id})
-        
-        bgg_username = user_data.get('bgg_username', 'Unknown')
+
+        bgg_username = user_data.get("bgg_username", "Unknown")
         success_text = f"""🎉 API key linked successfully, {first_name}!
 
 Your existing BGG account *{bgg_username}* is now connected to this Telegram account.
@@ -341,10 +363,10 @@ Your existing BGG account *{bgg_username}* is now connected to this Telegram acc
 
 /help - See all commands
 /commands - Quick action menu"""
-        
+
         bot.send_message(message.chat.id, success_text)
         logger.info(f"Linked existing API key {api_key} to Telegram user {user_id}")
-        
+
     except Exception as e:
         logger.error(f"API key registration error: {e}")
         bot.send_message(message.chat.id, f"❌ Registration failed: {str(e)}")
@@ -386,7 +408,7 @@ def handle_help(message):
 • 🎯 Filter games by player count
 
 Just talk to me naturally about board games and I'll understand what you want to do! 🤖"""
-    
+
     bot.reply_to(message, help_text)
 
 
@@ -395,27 +417,36 @@ def handle_commands(message):
     logger.info(message)
     user_id = message.from_user.id
     is_user, _ = check_is_user(user_id)
-    
+
     if not is_user:
-        bot.reply_to(message, "Please register first with /register to access all commands.")
+        bot.reply_to(
+            message, "Please register first with /register to access all commands."
+        )
         return
-    
+
     markup = telebot.types.InlineKeyboardMarkup()
     markup.add(
-        telebot.types.InlineKeyboardButton("📋 Log a Play", callback_data="cmd_log_play"),
-        telebot.types.InlineKeyboardButton("❤️ Add to Wishlist", callback_data="cmd_wishlist")
+        telebot.types.InlineKeyboardButton(
+            "📋 Log a Play", callback_data="cmd_log_play"
+        ),
+        telebot.types.InlineKeyboardButton(
+            "❤️ Add to Wishlist", callback_data="cmd_wishlist"
+        ),
     )
     markup.add(
-        telebot.types.InlineKeyboardButton("📚 My Collection", callback_data="cmd_collection"),
-        telebot.types.InlineKeyboardButton("📊 Recent Plays", callback_data="cmd_recent")
+        telebot.types.InlineKeyboardButton(
+            "📚 My Collection", callback_data="cmd_collection"
+        ),
+        telebot.types.InlineKeyboardButton(
+            "📊 Recent Plays", callback_data="cmd_recent"
+        ),
     )
     markup.add(
         telebot.types.InlineKeyboardButton("🔍 Find Game", callback_data="cmd_find"),
-        telebot.types.InlineKeyboardButton("❓ Help", callback_data="cmd_help")
+        telebot.types.InlineKeyboardButton("❓ Help", callback_data="cmd_help"),
     )
-    
-    bot.reply_to(message, "🎮 What would you like to do?", reply_markup=markup)
 
+    bot.reply_to(message, "🎮 What would you like to do?", reply_markup=markup)
 
 
 @bot.message_handler(commands=["version"])
@@ -437,9 +468,9 @@ def perform_step(message):
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
     message_text = message.text.lower()
-    
+
     is_user, credit = check_is_user(user_id)
-    
+
     # Guide unregistered users to registration
     if not is_user:
         response = f"""Hi {first_name}! 👋 
@@ -450,10 +481,10 @@ I'd love to help you with board games, but you'll need to register first.
 /help - Learn what I can do
 
 Ready to get started? 🎲"""
-        
+
         bot.reply_to(message, response)
         return
-    
+
     if credit <= 0:
         bot.reply_to(message, f"Sorry {first_name}, you're out of credits! ⊙﹏⊙")
         return
@@ -465,7 +496,7 @@ Ready to get started? 🎲"""
         previous_message_id = message.reply_to_message.id
         previous_messages = retrieve_messages(previous_message_id)
         messages = previous_messages + messages
-    
+
     try:
         answer = None
         i = 0
@@ -479,12 +510,11 @@ Ready to get started? 🎲"""
     except Exception as e:
         bot.reply_to(message, str(e))
         return
-    
+
     reply_id = reply.id
     save_document(
         {"message_id": reply_id, "messages": messages}, collection_name="messages"
     )
-
 
 
 if __name__ == "__main__":
