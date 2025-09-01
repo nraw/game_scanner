@@ -103,6 +103,52 @@ def verify_api_key(api_key: str) -> bool:
     return get_user_by_api_key(api_key) is not None
 
 
+def delete_user(api_key: str) -> bool:
+    """Delete a user account and all associated data."""
+    try:
+        users_collection = get_collection("users")
+        user_doc = users_collection.document(api_key)
+        
+        # Check if user exists
+        if not user_doc.get().exists:
+            logger.warning(f"User with API key {api_key} not found")
+            return False
+        
+        # Delete user document
+        user_doc.delete()
+        logger.info(f"Deleted user with API key {api_key}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error deleting user {api_key}: {e}")
+        return False
+
+
+def delete_user_by_telegram_id(telegram_user_id: int) -> bool:
+    """Delete a user account by Telegram ID."""
+    try:
+        users_collection = get_collection("users")
+        
+        # Find user by telegram_user_id
+        query = users_collection.where("telegram_user_id", "==", telegram_user_id).limit(1)
+        docs = list(query.get())
+        
+        if not docs:
+            logger.warning(f"User with Telegram ID {telegram_user_id} not found")
+            return False
+        
+        # Delete the user document
+        doc_id = docs[0].id
+        users_collection.document(doc_id).delete()
+        
+        logger.info(f"Deleted user with Telegram ID {telegram_user_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error deleting user with Telegram ID {telegram_user_id}: {e}")
+        return False
+
+
 def list_all_users() -> list:
     """List all users (for admin purposes)."""
     users_collection = get_collection("users")

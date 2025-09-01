@@ -10,6 +10,7 @@ from game_scanner.telegram_utils import (check_is_user, consume_credit,
                                          get_user_by_telegram_id,
                                          get_user_tier, register_telegram_user,
                                          upgrade_to_premium)
+from game_scanner.user_auth import delete_user_by_telegram_id
 
 bot = telebot.TeleBot(os.environ["TELEGRAM_TOKEN"], parse_mode="Markdown")
 
@@ -97,6 +98,12 @@ def callback_query(call):
         handle_approve_upgrade_callback(call)
     elif call.data.startswith("deny_upgrade_"):
         handle_deny_upgrade_callback(call)
+    
+    # Account deletion handlers
+    elif call.data.startswith("confirm_delete_"):
+        handle_confirm_delete_callback(call)
+    elif call.data.startswith("cancel_delete_"):
+        handle_cancel_delete_callback(call)
 
 
 def handle_command_callback(call):
@@ -342,6 +349,92 @@ Thank you for your understanding. 🙏"""
         )
 
 
+def handle_confirm_delete_callback(call):
+    """Handle confirmation of account deletion."""
+    bot.answer_callback_query(call.id, "Processing deletion...")
+    
+    # Extract user ID from callback data
+    user_id = int(call.data.split("_")[-1])
+    first_name = call.from_user.first_name or "User"
+    
+    # Verify this is the user's own account
+    if call.from_user.id != user_id:
+        bot.answer_callback_query(call.id, "❌ Access denied")
+        return
+    
+    # Attempt to delete the account
+    success = delete_user_by_telegram_id(user_id)
+    
+    if success:
+        # Update the message to show completion
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=f"""✅ **Account Deleted Successfully**
+
+{first_name}, your account has been permanently deleted.
+
+**What was deleted:**
+• Your BGG account connection
+• All stored credentials and API keys
+• Your credit balance and tier information
+• All associated data
+
+Thank you for using BGG Logger Bot. If you ever want to use the service again, you can register a new account with /register.
+
+Goodbye! 👋"""
+        )
+        logger.info(f"Successfully deleted account for Telegram user {user_id}")
+        
+    else:
+        # Show error message
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=f"""❌ **Account Deletion Failed**
+
+{first_name}, we encountered an error while trying to delete your account.
+
+**What to do:**
+• Try again later with /delete_account
+• Contact support if the problem persists
+• Check your connection and try again
+
+Your account remains active."""
+        )
+        logger.error(f"Failed to delete account for Telegram user {user_id}")
+
+
+def handle_cancel_delete_callback(call):
+    """Handle cancellation of account deletion."""
+    bot.answer_callback_query(call.id, "Deletion cancelled")
+    
+    # Extract user ID from callback data
+    user_id = int(call.data.split("_")[-1])
+    first_name = call.from_user.first_name or "User"
+    
+    # Verify this is the user's own account
+    if call.from_user.id != user_id:
+        bot.answer_callback_query(call.id, "❌ Access denied")
+        return
+    
+    # Update the message to show cancellation
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=f"""✅ **Account Deletion Cancelled**
+
+{first_name}, your account deletion has been cancelled. Your account remains active.
+
+**Your account is safe:**
+• No data was deleted
+• Your BGG connection is still active
+• Your credits and settings are unchanged
+
+Use /help to see what you can do with your account."""
+    )
+
+
 @bot.message_handler(commands=["play"])
 def send_play(message):
     logger.info(message)
@@ -543,6 +636,7 @@ def handle_help(message):
 /commands - Interactive command menu
 /credits - Check your credit balance and account info
 /upgrade - View premium upgrade options
+/delete_account - Permanently delete your account
 /version - Show bot version
 
 *Registration Commands:*
@@ -640,7 +734,7 @@ def handle_credits(message):
 • Commands like /help, /credits, /start are free
 
 **Need more credits?** 
-• Free users: /upgrade to see premium options
+• Free users: /upgrade to see premium options"""
     else:
         credit_text = f"""💳 **Credit Status**
 
@@ -763,6 +857,48 @@ Your account has been upgraded to **Premium**!
 
     else:
         bot.reply_to(message, f"❌ Failed to upgrade user {target_user_id}.")
+
+
+@bot.message_handler(commands=["delete_account"])
+def handle_delete_account(message):
+    logger.info(message)
+    user_id = message.from_user.id
+    first_name = message.from_user.first_name or "there"
+
+    is_user, _ = check_is_user(user_id)
+    if not is_user:
+        bot.reply_to(
+            message, "You don't have an account to delete. Use /register to create one."
+        )
+        return
+
+    # Get user data for confirmation
+    user_data = get_user_by_telegram_id(user_id)
+    bgg_username = user_data.get("bgg_username", "Unknown") if user_data else "Unknown"
+
+    # Send confirmation message with inline buttons
+    confirmation_text = f"""⚠️ **Account Deletion Confirmation**
+
+Hi {first_name}, you're about to delete your account permanently.
+
+**Account Details:**
+• BGG Username: {bgg_username}
+• All your data will be permanently deleted
+• This action cannot be undone
+
+Are you sure you want to proceed?"""
+
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.add(
+        telebot.types.InlineKeyboardButton(
+            "❌ Cancel", callback_data=f"cancel_delete_{user_id}"
+        ),
+        telebot.types.InlineKeyboardButton(
+            "🗑️ Delete Account", callback_data=f"confirm_delete_{user_id}"
+        ),
+    )
+
+    bot.reply_to(message, confirmation_text, reply_markup=markup)
 
 
 @bot.message_handler(commands=["version"])
