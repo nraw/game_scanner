@@ -57,7 +57,7 @@ def create_user(bgg_username: str, bgg_password: str) -> str:
         "api_key": api_key,
         "encrypted_credentials": encrypted_creds,
         "encryption_key": base64.b64encode(encryption_key).decode(),
-        "tier": "premium",  # For now, all users are premium
+        "tier": "free",  # New users start as free tier
         "created_at": "2025-08-30",  # You could use firestore.SERVER_TIMESTAMP
     }
     

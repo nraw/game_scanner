@@ -6,11 +6,10 @@ from loguru import logger
 from game_scanner.commands import set_it, spike_it
 from game_scanner.db import retrieve_messages, save_document
 from game_scanner.parse_chat import parse_chat, reply_with_last_bot_query
-from game_scanner.telegram_utils import (
-    check_is_user,
-    get_user_by_telegram_id,
-    register_telegram_user,
-)
+from game_scanner.telegram_utils import (check_is_user, consume_credit,
+                                         get_user_by_telegram_id,
+                                         get_user_tier, register_telegram_user,
+                                         upgrade_to_premium)
 
 bot = telebot.TeleBot(os.environ["TELEGRAM_TOKEN"], parse_mode="Markdown")
 
@@ -90,6 +89,14 @@ def callback_query(call):
     # New command menu handlers
     elif call.data.startswith("cmd_"):
         handle_command_callback(call)
+
+    # Upgrade request handlers
+    elif call.data.startswith("request_upgrade_"):
+        handle_upgrade_request_callback(call)
+    elif call.data.startswith("approve_upgrade_"):
+        handle_approve_upgrade_callback(call)
+    elif call.data.startswith("deny_upgrade_"):
+        handle_deny_upgrade_callback(call)
 
 
 def handle_command_callback(call):
@@ -173,7 +180,6 @@ I'll use BoardGameGeek to find information! 🎮"""
 • Just talk naturally about board games
 • I understand context from previous messages
 • Use reply to continue conversations
-• I can handle barcodes in photos
 
 Need more help? Just ask! 🤖"""
 
@@ -181,6 +187,159 @@ Need more help? Just ask! 🤖"""
         response = "Unknown command. Try /help for assistance."
 
     bot.send_message(call.message.chat.id, response)
+
+
+def handle_upgrade_request_callback(call):
+    """Handle upgrade request from user."""
+    bot.answer_callback_query(call.id)
+
+    # Extract user ID from callback data
+    user_id = int(call.data.split("_")[-1])
+
+    # Get user info
+    user_data = get_user_by_telegram_id(user_id)
+    if not user_data:
+        bot.send_message(
+            call.message.chat.id, "❌ Error retrieving your account information."
+        )
+        return
+
+    # Check if already premium
+    current_tier = get_user_tier(user_id)
+    if current_tier == "premium":
+        bot.send_message(call.message.chat.id, "You're already premium! 🌟")
+        return
+
+    # Send confirmation to user
+    user_first_name = call.from_user.first_name or "User"
+    bgg_username = user_data.get("bgg_username", "Unknown")
+
+    user_confirmation = f"""✅ **Premium Upgrade Request Sent**
+
+Hi {user_first_name}! Your premium upgrade request has been sent to our admin for review.
+
+**Request Details:**
+• Account: {bgg_username}
+• Current Tier: Free
+• Requested: Premium Upgrade
+
+You'll receive a notification once your request is processed. Thank you for your patience! 🙏"""
+
+    bot.send_message(call.message.chat.id, user_confirmation)
+
+    # Send admin notification
+    admin_chat_id = os.getenv("TELEGRAM_CHAT_ID", -4108154376)
+
+    admin_notification = f"""🚀 **Premium Upgrade Request**
+
+**User Details:**
+• Name: {user_first_name}
+• Telegram ID: {user_id}
+• BGG Username: {bgg_username}
+• Current Tier: Free
+• Requested: Premium Upgrade
+
+**Actions:**"""
+
+    # Create admin approval buttons
+    admin_markup = telebot.types.InlineKeyboardMarkup()
+    admin_markup.add(
+        telebot.types.InlineKeyboardButton(
+            "✅ Approve", callback_data=f"approve_upgrade_{user_id}"
+        ),
+        telebot.types.InlineKeyboardButton(
+            "❌ Deny", callback_data=f"deny_upgrade_{user_id}"
+        ),
+    )
+
+    bot.send_message(admin_chat_id, admin_notification, reply_markup=admin_markup)
+
+
+def handle_approve_upgrade_callback(call):
+    """Handle admin approval of upgrade request."""
+    bot.answer_callback_query(call.id, "Processing upgrade...")
+
+    # Extract user ID from callback data
+    user_id = int(call.data.split("_")[-1])
+
+    # Perform the upgrade
+    success = upgrade_to_premium(user_id)
+
+    if success:
+        # Update admin message
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=f"{call.message.text}\n\n✅ **APPROVED** - User {user_id} upgraded to Premium",
+        )
+
+        # Notify the user
+        try:
+            user_notification = """🎉 **Premium Upgrade Approved!**
+
+Congratulations! Your premium upgrade request has been approved.
+
+**New Status:**
+• ⭐ **Premium Tier**
+• 💳 **1000 Credits** available
+• 🚀 **All features unlocked**
+
+Ready to explore? Try:
+• "I played Wingspan with friends yesterday"
+• "Add Gloomhaven to my wishlist"
+• "Show my games for 3 players"
+
+/credits - Check your new balance
+/help - See all available features
+
+Thank you for upgrading! 🎯"""
+
+            bot.send_message(user_id, user_notification)
+        except Exception as e:
+            logger.error(f"Could not notify user {user_id} of approval: {e}")
+            bot.send_message(
+                call.message.chat.id,
+                f"⚠️ Upgrade successful but couldn't notify user {user_id}",
+            )
+    else:
+        bot.send_message(call.message.chat.id, f"❌ Failed to upgrade user {user_id}")
+
+
+def handle_deny_upgrade_callback(call):
+    """Handle admin denial of upgrade request."""
+    bot.answer_callback_query(call.id, "Request denied")
+
+    # Extract user ID from callback data
+    user_id = int(call.data.split("_")[-1])
+
+    # Update admin message
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=f"{call.message.text}\n\n❌ **DENIED** - Request for user {user_id} rejected",
+    )
+
+    # Notify the user
+    try:
+        user_notification = """❌ **Premium Upgrade Request Denied**
+
+Unfortunately, your premium upgrade request has been denied at this time.
+
+**Next Steps:**
+• Contact support for more information
+• Ensure payment has been processed if applicable
+• Try again later if this was due to a temporary issue
+
+If you believe this was an error, please contact support directly.
+
+Thank you for your understanding. 🙏"""
+
+        bot.send_message(user_id, user_notification)
+    except Exception as e:
+        logger.error(f"Could not notify user {user_id} of denial: {e}")
+        bot.send_message(
+            call.message.chat.id, f"⚠️ Request denied but couldn't notify user {user_id}"
+        )
 
 
 @bot.message_handler(commands=["play"])
@@ -382,6 +541,8 @@ def handle_help(message):
 /register - Connect your BGG account (shows options)
 /help - Show this help message
 /commands - Interactive command menu
+/credits - Check your credit balance and account info
+/upgrade - View premium upgrade options
 /version - Show bot version
 
 *Registration Commands:*
@@ -403,7 +564,6 @@ def handle_help(message):
 • 📋 Log plays to BoardGameGeek
 • 📚 Browse your game collection  
 • ❤️ Manage your wishlist
-• 🔍 Barcode scanning support
 • 📊 View play history
 • 🎯 Filter games by player count
 
@@ -447,6 +607,162 @@ def handle_commands(message):
     )
 
     bot.reply_to(message, "🎮 What would you like to do?", reply_markup=markup)
+
+
+@bot.message_handler(commands=["credits"])
+def handle_credits(message):
+    logger.info(message)
+    user_id = message.from_user.id
+    first_name = message.from_user.first_name or "there"
+
+    is_user, credit = check_is_user(user_id)
+    if not is_user:
+        bot.reply_to(
+            message, "Please register first with /register to check your credits."
+        )
+        return
+
+    user_data = get_user_by_telegram_id(user_id)
+    if user_data:
+        tier = user_data.get("tier", "free")
+        bgg_username = user_data.get("bgg_username", "Unknown")
+
+        credit_text = f"""💳 **Credit Status for {first_name}**
+
+**BGG Account:** {bgg_username}
+**Tier:** {tier.title()}
+**Available Credits:** {credit}
+
+**Credit Info:**
+• Premium users start with 1000 credits
+• Free users start with 4 credits  
+• Each AI interaction consumes 1 credit
+• Commands like /help, /credits, /start are free
+
+**Need more credits?** 
+• Free users: /upgrade to see premium options
+    else:
+        credit_text = f"""💳 **Credit Status**
+
+**Available Credits:** {credit}
+
+Unable to retrieve detailed account information."""
+
+    bot.reply_to(message, credit_text)
+
+
+@bot.message_handler(commands=["upgrade"])
+def handle_upgrade(message):
+    logger.info(message)
+    user_id = message.from_user.id
+    first_name = message.from_user.first_name or "there"
+
+    is_user, current_credits = check_is_user(user_id)
+    if not is_user:
+        bot.reply_to(message, "Please register first with /register before upgrading.")
+        return
+
+    current_tier = get_user_tier(user_id)
+
+    if current_tier == "premium":
+        bot.reply_to(
+            message,
+            f"You're already premium, {first_name}! 🌟\n\nUse /credits to see your current balance.",
+        )
+        return
+
+    # Show upgrade information with request option
+    upgrade_text = f"""⭐ **Upgrade to Premium**
+
+Hi {first_name}! Ready to unlock the full experience?
+
+**Current Status:**
+• Tier: Free ({current_credits} credits remaining)
+• Limited to basic features
+
+**Premium Benefits:**
+• 🚀 **1000 credits** (vs 4 for free users)
+
+**How to Upgrade:**
+Click "Request Premium" below to send an upgrade request to our admin for manual approval.
+
+⚠️ **Note:** This command only shows upgrade information. The button below will send your upgrade request for admin review."""
+
+    # Add inline button for upgrade request
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.add(
+        telebot.types.InlineKeyboardButton(
+            "🚀 Request Premium Upgrade", callback_data=f"request_upgrade_{user_id}"
+        )
+    )
+
+    bot.reply_to(message, upgrade_text, reply_markup=markup)
+
+
+@bot.message_handler(commands=["admin_upgrade"])
+def handle_admin_upgrade(message):
+    """Admin-only command to upgrade users. Requires admin authorization."""
+    logger.info(message)
+    user_id = message.from_user.id
+
+    # Check if user is admin (you would implement proper admin check here)
+    ADMIN_USER_IDS = [1901217395, 6200147668]  # Replace with actual admin IDs
+
+    if user_id not in ADMIN_USER_IDS:
+        bot.reply_to(message, "❌ Access denied. Admin privileges required.")
+        return
+
+    # Parse target user ID from command
+    parts = message.text.split()
+    if len(parts) != 2:
+        bot.reply_to(message, "Usage: `/admin_upgrade TELEGRAM_USER_ID`")
+        return
+
+    try:
+        target_user_id = int(parts[1])
+    except ValueError:
+        bot.reply_to(message, "❌ Invalid user ID format.")
+        return
+
+    # Check if target user exists
+    is_user, _ = check_is_user(target_user_id)
+    if not is_user:
+        bot.reply_to(message, f"❌ User {target_user_id} not found in database.")
+        return
+
+    current_tier = get_user_tier(target_user_id)
+    if current_tier == "premium":
+        bot.reply_to(message, f"User {target_user_id} is already premium.")
+        return
+
+    # Perform the upgrade
+    success = upgrade_to_premium(target_user_id)
+
+    if success:
+        bot.reply_to(
+            message, f"✅ Successfully upgraded user {target_user_id} to premium."
+        )
+
+        # Notify the upgraded user
+        try:
+            notification = """🎉 **Congratulations!**
+
+Your account has been upgraded to **Premium**!
+
+**New Status:**
+• ⭐ **Premium Tier** 
+• 💳 **1000 Credits** available
+• 🚀 **All features unlocked**
+
+/credits - Check your new balance
+/help - See all available features"""
+
+            bot.send_message(target_user_id, notification)
+        except Exception as e:
+            logger.error(f"Could not notify user {target_user_id}: {e}")
+
+    else:
+        bot.reply_to(message, f"❌ Failed to upgrade user {target_user_id}.")
 
 
 @bot.message_handler(commands=["version"])
@@ -498,6 +814,15 @@ Ready to get started? 🎲"""
         messages = previous_messages + messages
 
     try:
+        # Consume a credit for this AI interaction
+        credit_consumed = consume_credit(user_id, 1)
+        if not credit_consumed:
+            bot.reply_to(
+                message,
+                "❌ Unable to process request - credit system error. Please try /credits to check your balance.",
+            )
+            return
+
         answer = None
         i = 0
         while answer is None and i < 10:
