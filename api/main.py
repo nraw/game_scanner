@@ -21,7 +21,8 @@ try:
         get_user_by_api_key, 
         get_user_bgg_credentials,
         verify_api_key,
-        list_all_users
+        list_all_users,
+        delete_user
     )
     HAS_MODULES = True
 except ImportError as e:
@@ -65,6 +66,8 @@ class handler(BaseHTTPRequestHandler):
             # Route to different endpoints
             if endpoint == "/register":
                 self._handle_user_registration(query_params)
+            elif endpoint == "/delete_account":
+                self._handle_delete_account(query_params)
             elif endpoint == "/users":
                 self._handle_list_users(query_params)
             elif endpoint.startswith("/lookup"):
@@ -104,6 +107,43 @@ class handler(BaseHTTPRequestHandler):
             self._send_json({'error': str(e)}, status=400)
         except Exception as e:
             self._send_json({'error': f'Registration failed: {str(e)}'}, status=500)
+    
+    def _handle_delete_account(self, params):
+        """Handle account deletion."""
+        api_key = params.get("api_key")
+        confirm_delete = params.get("confirm_delete")
+        
+        if not api_key:
+            self._send_json({
+                'error': 'Missing required parameter: api_key'
+            }, status=400)
+            return
+            
+        if not confirm_delete:
+            self._send_json({
+                'error': 'Confirmation required: confirm_delete parameter must be present'
+            }, status=400)
+            return
+            
+        # Verify API key exists and get user info before deletion
+        user_data = get_user_by_api_key(api_key)
+        if not user_data:
+            self._send_json({'error': 'Invalid API key'}, status=401)
+            return
+            
+        try:
+            success = delete_user(api_key)
+            if success:
+                self._send_json({
+                    'message': 'Account deleted successfully',
+                    'deleted_user': user_data.get('bgg_username', 'Unknown'),
+                    'warning': 'All your data has been permanently removed'
+                })
+            else:
+                self._send_json({'error': 'Failed to delete account'}, status=500)
+                
+        except Exception as e:
+            self._send_json({'error': f'Account deletion failed: {str(e)}'}, status=500)
     
     def _handle_list_users(self, params):
         """Handle listing all users (admin endpoint)."""
