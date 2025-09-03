@@ -18,6 +18,8 @@ try:
     from game_scanner.save_bgg_id import save_bgg_id
     from game_scanner.user_auth import (
         create_user, 
+        authenticate_user,
+        login_user,
         get_user_by_api_key, 
         get_user_bgg_credentials,
         verify_api_key,
@@ -85,7 +87,7 @@ class handler(BaseHTTPRequestHandler):
             self._send_json({'error': str(e), 'type': type(e).__name__}, status=500)
 
     def _handle_user_registration(self, params):
-        """Handle new user registration."""
+        """Handle user authentication (login or register)."""
         bgg_username = params.get("bgg_username")
         bgg_password = params.get("bgg_password")
         
@@ -96,17 +98,17 @@ class handler(BaseHTTPRequestHandler):
             return
             
         try:
-            api_key = create_user(bgg_username, bgg_password)
+            api_key = authenticate_user(bgg_username, bgg_password)
             self._send_json({
-                'message': 'User created successfully',
+                'message': 'Authentication successful',
                 'api_key': api_key,
                 'bgg_username': bgg_username,
                 'instructions': 'Save this API key! Use it in all future requests as ?api_key=YOUR_KEY'
             })
         except ValueError as e:
-            self._send_json({'error': str(e)}, status=400)
+            self._send_json({'error': str(e)}, status=401)
         except Exception as e:
-            self._send_json({'error': f'Registration failed: {str(e)}'}, status=500)
+            self._send_json({'error': f'Authentication failed: {str(e)}'}, status=500)
     
     def _handle_delete_account(self, params):
         """Handle account deletion."""
