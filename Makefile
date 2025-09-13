@@ -3,3 +3,6 @@ test:
 
 telegram:
 	python3 telegram_app.py
+
+deploy:
+	vercel --prod

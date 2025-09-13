@@ -1,7 +1,7 @@
 """Test user authentication functions."""
 import pytest
 from unittest.mock import Mock, patch
-from game_scanner.user_auth import login_user, authenticate_user, create_user
+from game_scanner.user_auth import login_user, authenticate_user
 
 
 class TestLoginUser:

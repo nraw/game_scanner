@@ -19,3 +19,8 @@ def test_get_bgg_url():
     expected_url = "https://boardgamegeek.com/boardgame/167355/nemesis"
     url = get_bgg_url(query)
     assert url == expected_url
+
+
+def test_query_google():
+    query = "kites a fun family game for for 2 to 6"
+    url = query_google(query)

@@ -7,8 +7,8 @@ from loguru import logger
 
 from game_scanner.errors import (
     NoGoogleMatchesError,
-    NotBGGPageError,
-    NotBoardgamePageError,
+    GoogleQuotaExceededError,
+    GoogleAPIError,
 )
 from game_scanner.settings import conf
 
@@ -53,6 +53,15 @@ def query_google(title, site=None):
         url += f"&siteSearch={site}"
     res = requests.get(url)
     response = res.json()
+
+    # Check for API errors first
+    if "error" in response:
+        error_info = response["error"]
+        if error_info.get("code") == 429:
+            raise GoogleQuotaExceededError(error_info.get('message', 'Rate limit exceeded'))
+        else:
+            raise GoogleAPIError(error_info.get('code'), error_info.get('message'))
+
     if "items" not in response:
         raise NoGoogleMatchesError(title)
     return response
