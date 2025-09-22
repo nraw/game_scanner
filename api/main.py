@@ -17,27 +17,33 @@ try:
     from game_scanner.register_play import register_play
     from game_scanner.save_bgg_id import save_bgg_id
     from game_scanner.user_auth import (
-        create_user, 
+        create_user,
         authenticate_user,
         login_user,
-        get_user_by_api_key, 
+        get_user_by_api_key,
         get_user_bgg_credentials,
         verify_api_key,
         list_all_users,
         delete_user
     )
+    from .telegram_handlers import TelegramHandlers
     HAS_MODULES = True
 except ImportError as e:
     HAS_MODULES = False
     IMPORT_ERROR = str(e)
 
 class handler(BaseHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        # Initialize telegram handlers
+        self.telegram_handlers = None
+        super().__init__(*args, **kwargs)
+
     def do_GET(self):
         self._handle_request()
-    
+
     def do_POST(self):
         self._handle_request()
-    
+
     def _handle_request(self):
         try:
             # Parse URL and query parameters
@@ -48,15 +54,25 @@ class handler(BaseHTTPRequestHandler):
             # Flatten query parameters (parse_qs returns lists)
             query_params = {k: v[0] if v else '' for k, v in query_params.items()}
             
-            # Handle POST form data
+            # Handle POST data
+            raw_post_data = None
             if self.command == 'POST':
                 content_length = int(self.headers.get('Content-Length', 0))
                 if content_length > 0:
-                    post_data = self.rfile.read(content_length).decode('utf-8')
-                    form_data = parse_qs(post_data)
-                    # Merge form data with query params
-                    for k, v in form_data.items():
-                        query_params[k] = v[0] if v else ''
+                    raw_post_data = self.rfile.read(content_length).decode('utf-8')
+
+                    # Check content type to decide how to parse
+                    content_type = self.headers.get('Content-Type', '')
+
+                    if 'application/json' in content_type:
+                        # For JSON requests, don't parse as form data
+                        query_params['_raw_post_data'] = raw_post_data
+                    else:
+                        # For form requests, parse as usual
+                        form_data = parse_qs(raw_post_data)
+                        # Merge form data with query params
+                        for k, v in form_data.items():
+                            query_params[k] = v[0] if v else ''
             
             print(f"Method: {self.command}, Endpoint: {endpoint}, Params: {query_params}")
             
@@ -64,10 +80,19 @@ class handler(BaseHTTPRequestHandler):
             if not HAS_MODULES:
                 self._send_error(f"Import error: {IMPORT_ERROR}")
                 return
-            
+
+            # Initialize telegram handlers if not already done
+            if self.telegram_handlers is None and HAS_MODULES:
+                self.telegram_handlers = TelegramHandlers(self)
+
             # Route to different endpoints
             if endpoint == "/register":
                 self._handle_user_registration(query_params)
+            elif endpoint == "/register_telegram":
+                if self.telegram_handlers:
+                    self.telegram_handlers.handle_telegram_registration(query_params)
+                else:
+                    self._send_error("Telegram handlers not available")
             elif endpoint == "/delete_account":
                 self._handle_delete_account(query_params)
             elif endpoint == "/users":
@@ -76,6 +101,11 @@ class handler(BaseHTTPRequestHandler):
                 self._handle_lookup(query_params)
             elif endpoint.startswith("/play"):
                 self._handle_play_registration(query_params)
+            elif endpoint.startswith("/telegram_mini_app"):
+                if self.telegram_handlers:
+                    self.telegram_handlers.handle_mini_app_static(endpoint)
+                else:
+                    self._send_error("Telegram handlers not available")
             else:
                 # Default: backward compatibility with existing interface
                 self._handle_legacy_request(query_params)
@@ -109,7 +139,7 @@ class handler(BaseHTTPRequestHandler):
             self._send_json({'error': str(e)}, status=401)
         except Exception as e:
             self._send_json({'error': f'Authentication failed: {str(e)}'}, status=500)
-    
+
     def _handle_delete_account(self, params):
         """Handle account deletion."""
         api_key = params.get("api_key")

@@ -105,6 +105,10 @@ def callback_query(call):
     elif call.data.startswith("cancel_delete_"):
         handle_cancel_delete_callback(call)
 
+    # Registration method selection
+    elif call.data == "show_command_registration":
+        handle_command_registration_callback(call)
+
 
 def handle_command_callback(call):
     """Handle callbacks from the /commands menu."""
@@ -376,7 +380,7 @@ def handle_confirm_delete_callback(call):
 
 **What was deleted:**
 • Your BGG account connection
-• All stored credentials and API keys
+• All stored credentials
 • Your credit balance and tier information
 • All associated data
 
@@ -435,6 +439,26 @@ Use /help to see what you can do with your account."""
     )
 
 
+def handle_command_registration_callback(call):
+    """Handle fallback to command-based registration."""
+    bot.answer_callback_query(call.id)
+
+    command_text = """📝 **Command-based Registration**
+
+Send me a message in this format:
+`/register_with_bgg YOUR_USERNAME YOUR_PASSWORD`
+
+Example: `/register_with_bgg johnsmith mypassword123`
+
+⚠️ *Security note:* Your credentials are encrypted and stored securely. I only use them to interact with BGG on your behalf.
+
+Don't have a BGG account yet? Create one at boardgamegeek.com first!
+
+*Tip: The form above is more secure and user-friendly!*"""
+
+    bot.send_message(call.message.chat.id, command_text)
+
+
 @bot.message_handler(commands=["play"])
 def send_play(message):
     logger.info(message)
@@ -458,23 +482,25 @@ def handle_register(message):
 
     register_text = """🔗 Let's connect your BoardGameGeek account!
 
-*Option 1: Register with BGG credentials*
-Send me a message in this format:
-`/register_with_bgg YOUR_USERNAME YOUR_PASSWORD`
+Choose how you'd like to register:"""
 
-Example: `/register_with_bgg johnsmith mypassword123`
+    # Create inline keyboard with Mini App option
+    markup = telebot.types.InlineKeyboardMarkup()
 
-*Option 2: Use existing API key*
-If you already have an API key from our web interface:
-`/register_with_api YOUR_API_KEY`
+    # Mini App button (preferred method)
+    web_app = telebot.types.WebAppInfo("https://gamescanner.vercel.app/telegram_mini_app/register.html")
+    markup.add(telebot.types.InlineKeyboardButton(
+        "🎯 Open Registration Form",
+        web_app=web_app
+    ))
 
-Example: `/register_with_api abc123xyz789...`
+    # Alternative command-based registration
+    markup.add(telebot.types.InlineKeyboardButton(
+        "📝 Use Command Instead",
+        callback_data="show_command_registration"
+    ))
 
-⚠️ *Security note:* Your credentials are encrypted and stored securely. I only use them to interact with BGG on your behalf.
-
-Don't have a BGG account yet? Create one at boardgamegeek.com first!"""
-
-    bot.reply_to(message, register_text)
+    bot.reply_to(message, register_text, reply_markup=markup)
 
 
 @bot.message_handler(commands=["register_with_bgg"])
@@ -538,12 +564,9 @@ Your BGG account *{bgg_username}* is now connected.
 
 If this is your account from our web interface, I tried to link it automatically. If that didn't work, you can:
 
-1. **Use your API key instead:**
-   `/register_with_api YOUR_API_KEY`
+1. **Double-check your password** and try again
 
-2. **Double-check your password** and try again
-
-3. **Contact support** if you're still having trouble
+2. **Contact support** if you're still having trouble
 
 Note: Each BGG account can only be linked to one Telegram user for security."""
             bot.send_message(message.chat.id, recovery_text)
@@ -551,77 +574,6 @@ Note: Each BGG account can only be linked to one Telegram user for security."""
             bot.send_message(message.chat.id, f"❌ Registration failed: {str(e)}")
 
 
-@bot.message_handler(commands=["register_with_api"])
-def handle_register_with_api(message):
-    logger.info(message)
-    user_id = message.from_user.id
-    first_name = message.from_user.first_name or "there"
-
-    # Check if already registered
-    is_user, _ = check_is_user(user_id)
-    if is_user:
-        bot.reply_to(
-            message,
-            f"You're already registered, {first_name}! 🎉\n\nUse /start to see your dashboard.",
-        )
-        return
-
-    # Parse the API key
-    parts = message.text.split()
-    if len(parts) != 2:
-        bot.reply_to(
-            message, "❌ Please use the format: `/register_with_api YOUR_API_KEY`"
-        )
-        return
-
-    api_key = parts[1]
-
-    # Delete the message for security
-    try:
-        bot.delete_message(message.chat.id, message.message_id)
-    except Exception:
-        pass  # Ignore if we can't delete
-
-    bot.send_chat_action(message.chat.id, "typing")
-
-    try:
-        # Verify the API key exists and get user data
-        from game_scanner.user_auth import get_user_by_api_key
-
-        user_data = get_user_by_api_key(api_key)
-
-        if not user_data:
-            bot.send_message(
-                message.chat.id, "❌ Invalid API key. Please check and try again."
-            )
-            return
-
-        # Link this Telegram user to the existing account
-        from game_scanner.db import get_collection
-
-        users_collection = get_collection("users")
-        user_doc = users_collection.document(api_key)
-        user_doc.update({"telegram_user_id": user_id})
-
-        bgg_username = user_data.get("bgg_username", "Unknown")
-        success_text = f"""🎉 API key linked successfully, {first_name}!
-
-Your existing BGG account *{bgg_username}* is now connected to this Telegram account.
-
-🚀 Let's get started! Try these:
-• "I played Wingspan yesterday"
-• "Add Gloomhaven to my wishlist"  
-• "Show my games for 2 players"
-
-/help - See all commands
-/commands - Quick action menu"""
-
-        bot.send_message(message.chat.id, success_text)
-        logger.info(f"Linked existing API key {api_key} to Telegram user {user_id}")
-
-    except Exception as e:
-        logger.error(f"API key registration error: {e}")
-        bot.send_message(message.chat.id, f"❌ Registration failed: {str(e)}")
 
 
 @bot.message_handler(commands=["help"])
@@ -641,7 +593,6 @@ def handle_help(message):
 
 *Registration Commands:*
 /register_with_bgg - Register with BGG username/password
-/register_with_api - Link existing API key
 
 *Natural Language Examples:*
 • "I played Wingspan with Alice and Bob"
@@ -907,6 +858,49 @@ def get_sha(message):
     bot.send_chat_action(message.chat.id, "typing")
     sha = os.popen("git rev-parse HEAD").read().strip()
     bot.reply_to(message, str(sha))
+
+
+@bot.message_handler(content_types=['web_app_data'])
+def handle_web_app_data(message):
+    """Handle data sent from Telegram Mini App."""
+    logger.info(f"Received web app data: {message.web_app_data.data}")
+
+    try:
+        import json
+        data = json.loads(message.web_app_data.data)
+
+        if data.get('action') == 'registration_success':
+            api_key = data.get('api_key')
+            bgg_username = data.get('bgg_username')
+            first_name = message.from_user.first_name or 'there'
+
+            success_text = f"""🎉 Registration successful, {first_name}!
+
+Your BGG account *{bgg_username}* is now connected.
+
+🔑 **Your API Key:** `{api_key}`
+
+⚠️ **IMPORTANT:** Save this API key! You can use it to:
+• Access our web interface
+• Recover your account if needed
+
+🚀 Let's get started! Try these:
+• "I played Wingspan yesterday"
+• "Add Gloomhaven to my wishlist"
+• "Show my games for 2 players"
+
+/help - See all commands
+/commands - Quick action menu"""
+
+            bot.reply_to(message, success_text)
+        else:
+            bot.reply_to(message, "Unknown web app action received.")
+
+    except json.JSONDecodeError:
+        bot.reply_to(message, "Invalid data received from web app.")
+    except Exception as e:
+        logger.error(f"Error handling web app data: {e}")
+        bot.reply_to(message, "An error occurred processing your registration.")
 
 
 @bot.message_handler(func=lambda message: True)
