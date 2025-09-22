@@ -588,11 +588,11 @@ def handle_help(message):
 /commands - Interactive command menu
 /credits - Check your credit balance and account info
 /upgrade - View premium upgrade options
-/delete_account - Permanently delete your account
+/delete\\_account - Permanently delete your account
 /version - Show bot version
 
 *Registration Commands:*
-/register_with_bgg - Register with BGG username/password
+/register\\_with\\_bgg - Register with BGG username/password
 
 *Natural Language Examples:*
 • "I played Wingspan with Alice and Bob"
@@ -600,14 +600,14 @@ def handle_help(message):
 • "Add Gloomhaven to wishlist"
 • "Show my games for 4 players"
 • "List my recent plays"
-• "Delete play #123"
+• "Delete play \\#123"
 
 *Direct Commands:*
-/play [game details] - Log a play directly
+/play \\[game details\\] - Log a play directly
 
 *Features:*
 • 📋 Log plays to BoardGameGeek
-• 📚 Browse your game collection  
+• 📚 Browse your game collection
 • ❤️ Manage your wishlist
 • 📊 View play history
 • 🎯 Filter games by player count
