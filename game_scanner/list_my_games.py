@@ -1,3 +1,4 @@
+import os
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
@@ -6,8 +7,15 @@ import requests
 from loguru import logger
 
 
-def get_my_games(player_count):
-    games = filter_games_by_playercount("nraw", player_count)
+def get_my_games(player_count, username=None, password=None):
+    """Get user's game collection. Uses provided credentials or service account fallback."""
+    # Use provided username or fall back to environment variable
+    username = username or os.environ.get("BGG_USERNAME", "nraw")
+
+    account_info = f" for {username}" if username != os.environ.get("BGG_USERNAME", "nraw") else " for service account"
+    logger.info(f"Retrieving game collection{account_info}")
+
+    games = filter_games_by_playercount(username, player_count)
     return games
 
 

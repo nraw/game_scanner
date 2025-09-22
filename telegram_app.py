@@ -863,16 +863,19 @@ def get_sha(message):
 @bot.message_handler(content_types=['web_app_data'])
 def handle_web_app_data(message):
     """Handle data sent from Telegram Mini App."""
-    logger.info(f"Received web app data: {message.web_app_data.data}")
+    logger.info(f"Received web app data from user {message.from_user.id}: {message.web_app_data.data}")
 
     try:
         import json
         data = json.loads(message.web_app_data.data)
+        logger.info(f"Parsed web app data: {data}")
 
         if data.get('action') == 'registration_success':
             api_key = data.get('api_key')
             bgg_username = data.get('bgg_username')
             first_name = message.from_user.first_name or 'there'
+
+            logger.info(f"Processing registration success for {first_name} (BGG: {bgg_username})")
 
             success_text = f"""🎉 Registration successful, {first_name}!
 
@@ -892,14 +895,20 @@ Your BGG account *{bgg_username}* is now connected.
 /help - See all commands
 /commands - Quick action menu"""
 
-            bot.reply_to(message, success_text)
+            reply = bot.reply_to(message, success_text)
+            logger.info(f"Sent registration success message to user {message.from_user.id}, message ID: {reply.message_id}")
+
         else:
+            logger.warning(f"Unknown web app action received: {data.get('action')}")
             bot.reply_to(message, "Unknown web app action received.")
 
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error in web app data: {e}")
         bot.reply_to(message, "Invalid data received from web app.")
     except Exception as e:
         logger.error(f"Error handling web app data: {e}")
+        import traceback
+        traceback.print_exc()
         bot.reply_to(message, "An error occurred processing your registration.")
 
 
@@ -953,10 +962,28 @@ Ready to get started? 🎲"""
             )
             return
 
+        # Get user's BGG credentials for play logging
+        bgg_username = None
+        bgg_password = None
+        try:
+            user_data = get_user_by_telegram_id(user_id)
+            if user_data and user_data.get('api_key'):
+                from game_scanner.user_auth import get_user_bgg_credentials
+                credentials = get_user_bgg_credentials(user_data['api_key'])
+                if credentials:
+                    bgg_username, bgg_password = credentials
+                    logger.info(f"Retrieved BGG credentials for Telegram user {user_id} (BGG: {bgg_username})")
+                else:
+                    logger.warning(f"Could not decrypt BGG credentials for Telegram user {user_id}")
+            else:
+                logger.warning(f"No API key found for Telegram user {user_id}")
+        except Exception as e:
+            logger.error(f"Error retrieving BGG credentials for Telegram user {user_id}: {e}")
+
         answer = None
         i = 0
         while answer is None and i < 10:
-            messages, answer = parse_chat(messages)
+            messages, answer = parse_chat(messages, bgg_username, bgg_password)
             if answer is None:
                 reply = reply_with_last_bot_query(bot, message, messages)
             i += 1

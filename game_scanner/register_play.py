@@ -10,18 +10,23 @@ from loguru import logger
 from game_scanner.schemas import PlayPayload
 
 
-def log_play_to_bgg(**play_payload_raw):
+def log_play_to_bgg(username=None, password=None, **play_payload_raw):
+    """Log a play to BGG using provided credentials or service account fallback."""
     play_payload = PlayPayload(**play_payload_raw).model_dump()
 
-    r = register_to_bgg(play_payload)
+    r = register_to_bgg(play_payload, username, password)
     if r.status_code != 200:
         error_message = f"Failed to log play: {r.text}"
         return error_message
     try:
-        update_my_board_games()
+        # Only update personal board games if using service account
+        if not username:  # Service account
+            update_my_board_games()
     except Exception as e:
-        error_message = f"Failed to update my_board_games: {e}"
-    response_text = f"Successfully logged play: {play_payload}"
+        logger.warning(f"Failed to update my_board_games: {e}")
+
+    account_info = f" to {username}'s account" if username else " to service account"
+    response_text = f"Successfully logged play{account_info}: {play_payload}"
     return response_text
 
 
@@ -98,8 +103,16 @@ def get_logged_plays(
     game_ids: Optional[List[int]] = None,
     last_n: Optional[int] = None,
     since: Optional[str] = None,
+    username=None,
+    password=None,
 ):
-    username = os.environ["BGG_USERNAME"]
+    """Get logged plays for a user. Uses provided credentials or service account fallback."""
+    # Use provided username or fall back to environment variable
+    username = username or os.environ["BGG_USERNAME"]
+
+    account_info = f" for {username}" if username != os.environ.get("BGG_USERNAME") else " for service account"
+    logger.info(f"Retrieving logged plays{account_info}")
+
     base_url = f"https://www.boardgamegeek.com/xmlapi2/plays?username={username}"
     plays = []
     page = 1
@@ -151,10 +164,11 @@ def get_logged_plays(
     return plays
 
 
-def delete_logged_play(play_id):
-
-    username = os.environ["BGG_USERNAME"]
-    password = os.environ["BGG_PASS"]
+def delete_logged_play(play_id, username=None, password=None):
+    """Delete a logged play using provided credentials or service account fallback."""
+    # Use provided credentials or fall back to environment variables
+    username = username or os.environ["BGG_USERNAME"]
+    password = password or os.environ["BGG_PASS"]
 
     login_payload = {"credentials": {"username": username, "password": password}}
     delete_play_payload = get_delete_play_payload(play_id)
@@ -172,6 +186,9 @@ def delete_logged_play(play_id):
             data=json.dumps(delete_play_payload),
             headers=headers,
         )
+
+    account_info = f" from {username}'s account" if username != os.environ.get("BGG_USERNAME") else " from service account"
+    logger.info(f"Deleted play {play_id}{account_info}")
     return r.text
 
 

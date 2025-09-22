@@ -69,12 +69,17 @@ class TelegramHandlers:
             api_key = register_telegram_user(int(telegram_user_id), bgg_username, bgg_password)
 
             if api_key:
+                # Send success response to Mini App
                 self.handler._send_json({
                     'success': True,
                     'message': 'Registration successful',
                     'api_key': api_key,
                     'bgg_username': bgg_username
                 })
+
+                # Also send a direct message to the user via Telegram bot as fallback
+                self._send_telegram_message(telegram_user_id, bgg_username, api_key, telegram_first_name)
+
             else:
                 self.handler._send_json({'error': 'Registration failed. Please check your BGG credentials.'}, status=400)
 
@@ -174,4 +179,44 @@ class TelegramHandlers:
 
         except Exception as e:
             print(f"Error validating init_data: {e}")
+            return False
+
+    def _send_telegram_message(self, telegram_user_id, bgg_username, api_key, first_name="there"):
+        """Send a direct message to the user via Telegram bot as fallback."""
+        try:
+            import os
+            import telebot
+
+            # Get bot token from environment
+            bot_token = os.getenv('TELEGRAM_TOKEN')
+            if not bot_token:
+                print("No TELEGRAM_TOKEN found, skipping direct message")
+                return False
+
+            bot = telebot.TeleBot(bot_token)
+
+            success_text = f"""🎉 Registration successful, {first_name}!
+
+Your BGG account *{bgg_username}* is now connected.
+
+🔑 **Your API Key:** `{api_key}`
+
+⚠️ **IMPORTANT:** Save this API key! You can use it to:
+• Access our web interface
+• Recover your account if needed
+
+🚀 Let's get started! Try these:
+• "I played Wingspan yesterday"
+• "Add Gloomhaven to my wishlist"
+• "Show my games for 2 players"
+
+/help - See all commands
+/commands - Quick action menu"""
+
+            bot.send_message(telegram_user_id, success_text, parse_mode="Markdown")
+            print(f"Successfully sent direct Telegram message to user {telegram_user_id}")
+            return True
+
+        except Exception as e:
+            print(f"Error sending Telegram message: {e}")
             return False

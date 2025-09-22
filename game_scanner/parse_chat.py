@@ -35,7 +35,15 @@ func_map = {
 }
 
 
-def parse_chat(messages: list[dict]):
+def parse_chat(messages: list[dict], bgg_username=None, bgg_password=None):
+    """
+    Parse chat messages and execute functions.
+
+    Args:
+        messages: List of chat messages
+        bgg_username: BGG username for functions that need credentials
+        bgg_password: BGG password for functions that need credentials
+    """
     client = openai.OpenAI(
         api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_BASE_URL"]
     )
@@ -59,6 +67,13 @@ def parse_chat(messages: list[dict]):
         params = json.loads(params_raw.arguments)
         func_name = params_raw.name
         func = func_map[func_name]
+
+        # Add credentials to functions that need them
+        if func_name in ["log_game", "delete_play", "list_played_games", "wishlist_game", "list_my_games"] and bgg_username and bgg_password:
+            params["username"] = bgg_username
+            params["password"] = bgg_password
+            logger.info(f"Added BGG credentials for {func_name} (user: {bgg_username})")
+
         output = func(**params)
         messages.append(
             {

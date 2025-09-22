@@ -339,17 +339,35 @@
                 if (response.ok) {
                     showSuccess('🎉 Registration successful! You can now close this window.');
 
-                    // Send success data back to bot
-                    tg.sendData(JSON.stringify({
+                    console.log('Registration successful, sending data to bot:', {
                         action: 'registration_success',
                         api_key: result.api_key,
                         bgg_username: username
-                    }));
+                    });
 
-                    // Close the mini app after a short delay
+                    // Send success data back to bot
+                    try {
+                        const dataToSend = JSON.stringify({
+                            action: 'registration_success',
+                            api_key: result.api_key,
+                            bgg_username: username
+                        });
+
+                        console.log('Sending data to Telegram bot:', dataToSend);
+                        tg.sendData(dataToSend);
+                        console.log('Data sent successfully');
+
+                        showSuccess('🎉 Registration successful! Notifying bot...');
+                    } catch (sendError) {
+                        console.error('Error sending data to bot:', sendError);
+                        showSuccess('🎉 Registration successful! Please return to chat.');
+                    }
+
+                    // Close the mini app after a longer delay to ensure data is sent
                     setTimeout(() => {
+                        console.log('Closing Mini App...');
                         tg.close();
-                    }, 2000);
+                    }, 3000);
                 } else {
                     throw new Error(result.error || 'Registration failed');
                 }
