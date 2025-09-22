@@ -5,7 +5,7 @@ from datetime import date
 import openai
 from loguru import logger
 
-from game_scanner.add_wishlist import add_wishlist
+from game_scanner.add_wishlist import add_wishlist, add_owned
 from game_scanner.list_my_games import get_my_games
 from game_scanner.play_payload_management import (
     get_bgg_id,
@@ -28,6 +28,7 @@ from game_scanner.schemas import (
 func_map = {
     "log_game": log_play_to_bgg,
     "wishlist_game": add_wishlist,
+    "own_game": add_owned,
     "get_bgg_id": get_bgg_id,
     "list_played_games": list_played_games,
     "delete_play": delete_logged_play,
@@ -69,7 +70,7 @@ def parse_chat(messages: list[dict], bgg_username=None, bgg_password=None):
         func = func_map[func_name]
 
         # Add credentials to functions that need them
-        if func_name in ["log_game", "delete_play", "list_played_games", "wishlist_game", "list_my_games"] and bgg_username and bgg_password:
+        if func_name in ["log_game", "delete_play", "list_played_games", "wishlist_game", "own_game", "list_my_games"] and bgg_username and bgg_password:
             params["username"] = bgg_username
             params["password"] = bgg_password
             logger.info(f"Added BGG credentials for {func_name} (user: {bgg_username})")
@@ -188,6 +189,14 @@ def get_all_tools():
             "function": {
                 "description": "Add the game to the wishlist",
                 "name": "wishlist_game",
+                "parameters": WishlistRequest.model_json_schema(),
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "description": "Add the game to owned collection",
+                "name": "own_game",
                 "parameters": WishlistRequest.model_json_schema(),
             },
         },

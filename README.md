@@ -40,6 +40,20 @@ curl "https://gamescanner.vercel.app/play?query=nemesis&api_key=YOUR_API_KEY"
 # Returns: {"message": "Play registered successfully", "game_id": "167355"}
 ```
 
+### 4. Add to Wishlist
+```bash
+curl -X POST "https://gamescanner.vercel.app/wishlist" \
+  -d "query=wingspan&api_key=YOUR_API_KEY"
+# Returns: {"success": true, "message": "Game added to wishlist successfully", "game_id": "167355"}
+```
+
+### 5. Add to Owned Collection
+```bash
+curl -X POST "https://gamescanner.vercel.app/owned" \
+  -d "query=azul&api_key=YOUR_API_KEY"
+# Returns: {"success": true, "message": "Game added to owned collection successfully", "game_id": "178900"}
+```
+
 ## 📡 API Endpoints
 
 | Endpoint | Method | Description | Auth Required |
@@ -48,6 +62,8 @@ curl "https://gamescanner.vercel.app/play?query=nemesis&api_key=YOUR_API_KEY"
 | `/lookup` | GET | Convert barcode/name to BGG ID | ❌ |
 | `/register` | POST | Create new user account | ❌ |
 | `/play` | GET | Register play to your BGG account | ✅ |
+| `/wishlist` | POST | Add game to your BGG wishlist | ✅ |
+| `/owned` | POST | Add game to your owned collection | ✅ |
 | `/users` | GET | List all users (admin) | ❌ |
 
 ### Parameters
@@ -58,6 +74,13 @@ curl "https://gamescanner.vercel.app/play?query=nemesis&api_key=YOUR_API_KEY"
 - `bg_name` - Override game name (optional)
 - `redirect` - Redirect to BGG page instead of JSON (optional)
 - `api_key` - Your API key (required for `/play`)
+
+**Wishlist & Owned Collection:**
+- `query` - Barcode or game name (optional)
+- `game_id` - Direct BGG game ID (optional)
+- `bgg_id` - Override BGG ID (optional)
+- `bg_name` - Override game name (optional)
+- `api_key` - Your API key (required)
 
 **Registration:**
 - `bgg_username` - Your BGG username (required)

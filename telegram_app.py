@@ -27,9 +27,9 @@ def send_welcome(message):
         welcome_text = f"""🎲 Hello {first_name}! Welcome to BGG Logger Bot!
 
 I'm your personal board game assistant. I can help you:
-• 📋 Log plays to BoardGameGeek  
+• 📋 Log plays to BoardGameGeek
 • 📚 Manage your game collection
-• ❤️ Add games to your wishlist
+• ❤️ Add games to your wishlist & owned collection
 • 📊 Track your gaming statistics
 
 To get started, you'll need to connect your BoardGameGeek account:
@@ -62,7 +62,7 @@ What would you like to do today?
 
 Quick actions:
 • Just tell me about a game you played!
-• "Add [game] to wishlist"
+• "Add [game] to my collection" or "Add [game] to wishlist"
 • "Show my games for 4 players"
 
 /commands - See all available features
@@ -130,16 +130,21 @@ You can log plays in several ways:
 Just tell me about your game and I'll handle the rest! 🎲"""
 
     elif call.data == "cmd_wishlist":
-        response = """❤️ *Add to Wishlist*
+        response = """❤️ *Manage Collection & Wishlist*
 
 Tell me which games you want to add:
 
-*Examples:*
-• "Add Gloomhaven to my wishlist"
-• "Wishlist Spirit Island"
-• "I want Wingspan"
+*Owned Collection Examples:*
+• "Add Gloomhaven to my collection"
+• "I own Spirit Island"
+• "Mark Wingspan as owned"
 
-I'll find the game and add it to your BGG wishlist! 🎯"""
+*Wishlist Examples:*
+• "Add Catan to my wishlist"
+• "Wishlist Terraforming Mars"
+• "I want Azul"
+
+I'll find the game and add it to your BGG collection or wishlist! 🎯"""
 
     elif call.data == "cmd_collection":
         response = """📚 *Your Collection*
@@ -597,7 +602,8 @@ def handle_help(message):
 *Natural Language Examples:*
 • "I played Wingspan with Alice and Bob"
 • "Log Azul, played yesterday, 45 minutes"
-• "Add Gloomhaven to wishlist"
+• "Add Gloomhaven to my collection"
+• "Add Catan to wishlist"
 • "Show my games for 4 players"
 • "List my recent plays"
 • "Delete play \\#123"
@@ -608,7 +614,7 @@ def handle_help(message):
 *Features:*
 • 📋 Log plays to BoardGameGeek
 • 📚 Browse your game collection
-• ❤️ Manage your wishlist
+• ❤️ Manage your wishlist & collection
 • 📊 View play history
 • 🎯 Filter games by player count
 
@@ -635,7 +641,7 @@ def handle_commands(message):
             "📋 Log a Play", callback_data="cmd_log_play"
         ),
         telebot.types.InlineKeyboardButton(
-            "❤️ Add to Wishlist", callback_data="cmd_wishlist"
+            "❤️ Manage Collection", callback_data="cmd_wishlist"
         ),
     )
     markup.add(

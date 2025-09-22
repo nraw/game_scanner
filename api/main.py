@@ -101,6 +101,10 @@ class handler(BaseHTTPRequestHandler):
                 self._handle_lookup(query_params)
             elif endpoint.startswith("/play"):
                 self._handle_play_registration(query_params)
+            elif endpoint == "/wishlist":
+                self._handle_wishlist_addition(query_params)
+            elif endpoint == "/owned":
+                self._handle_owned_addition(query_params)
             elif endpoint.startswith("/telegram_mini_app"):
                 if self.telegram_handlers:
                     self.telegram_handlers.handle_mini_app_static(endpoint)
@@ -265,7 +269,133 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             print(f"Error in play registration: {e}")
             self._send_json({'error': f'Play registration failed: {str(e)}'}, status=500)
-    
+
+    def _handle_wishlist_addition(self, params):
+        """Handle adding games to user's wishlist (premium feature requiring API key)."""
+        api_key = params.get("api_key")
+        query = params.get("query")
+        bgg_id = params.get("bgg_id")
+        bg_name = params.get("bg_name")
+        game_id = params.get("game_id")  # Direct game ID parameter
+
+        # Check API key
+        if not api_key:
+            self._send_json({
+                'error': 'API key required for wishlist operations',
+                'instructions': 'Get an API key by registering at /register'
+            }, status=401)
+            return
+
+        if not verify_api_key(api_key):
+            self._send_json({'error': 'Invalid API key'}, status=401)
+            return
+
+        # Need either query, game_id, or identifiers to determine the game
+        if not any([query, game_id, bgg_id, bg_name]):
+            self._send_json({
+                'error': 'Missing required parameter: query, game_id, bgg_id, or bg_name'
+            }, status=400)
+            return
+
+        try:
+            # Get game ID if not directly provided
+            if game_id:
+                final_game_id = game_id
+            else:
+                final_game_id = self._get_game_id(bgg_id, bg_name, query)
+
+            # Get user's BGG credentials
+            bgg_credentials = get_user_bgg_credentials(api_key)
+            if not bgg_credentials:
+                self._send_json({'error': 'Failed to retrieve user credentials'}, status=500)
+                return
+
+            username, password = bgg_credentials
+
+            # Add to user's wishlist
+            from game_scanner.add_wishlist import add_wishlist
+            result = add_wishlist(final_game_id, username, password)
+            print(f"Wishlist addition result: {result}")
+
+            # Save the mapping if we looked up a game
+            if query and not game_id:
+                save_bgg_id(query, final_game_id, extra={"auto": not ((bgg_id or bg_name) and query)})
+
+            self._send_json({
+                'success': True,
+                'message': 'Game added to wishlist successfully',
+                'game_id': final_game_id,
+                'bgg_username': username,
+                'url': f"https://www.boardgamegeek.com/boardgame/{final_game_id}"
+            })
+
+        except Exception as e:
+            print(f"Error in wishlist addition: {e}")
+            self._send_json({'error': f'Wishlist addition failed: {str(e)}'}, status=500)
+
+    def _handle_owned_addition(self, params):
+        """Handle adding games to user's owned collection (premium feature requiring API key)."""
+        api_key = params.get("api_key")
+        query = params.get("query")
+        bgg_id = params.get("bgg_id")
+        bg_name = params.get("bg_name")
+        game_id = params.get("game_id")  # Direct game ID parameter
+
+        # Check API key
+        if not api_key:
+            self._send_json({
+                'error': 'API key required for collection operations',
+                'instructions': 'Get an API key by registering at /register'
+            }, status=401)
+            return
+
+        if not verify_api_key(api_key):
+            self._send_json({'error': 'Invalid API key'}, status=401)
+            return
+
+        # Need either query, game_id, or identifiers to determine the game
+        if not any([query, game_id, bgg_id, bg_name]):
+            self._send_json({
+                'error': 'Missing required parameter: query, game_id, bgg_id, or bg_name'
+            }, status=400)
+            return
+
+        try:
+            # Get game ID if not directly provided
+            if game_id:
+                final_game_id = game_id
+            else:
+                final_game_id = self._get_game_id(bgg_id, bg_name, query)
+
+            # Get user's BGG credentials
+            bgg_credentials = get_user_bgg_credentials(api_key)
+            if not bgg_credentials:
+                self._send_json({'error': 'Failed to retrieve user credentials'}, status=500)
+                return
+
+            username, password = bgg_credentials
+
+            # Add to user's owned collection
+            from game_scanner.add_wishlist import add_owned
+            result = add_owned(final_game_id, username, password)
+            print(f"Owned collection addition result: {result}")
+
+            # Save the mapping if we looked up a game
+            if query and not game_id:
+                save_bgg_id(query, final_game_id, extra={"auto": not ((bgg_id or bg_name) and query)})
+
+            self._send_json({
+                'success': True,
+                'message': 'Game added to owned collection successfully',
+                'game_id': final_game_id,
+                'bgg_username': username,
+                'url': f"https://www.boardgamegeek.com/boardgame/{final_game_id}"
+            })
+
+        except Exception as e:
+            print(f"Error in owned collection addition: {e}")
+            self._send_json({'error': f'Owned collection addition failed: {str(e)}'}, status=500)
+
     def _handle_legacy_request(self, params):
         """Handle legacy requests for backward compatibility."""
         query = params.get("query")
