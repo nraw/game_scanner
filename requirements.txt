@@ -6,3 +6,4 @@ firebase-admin
 pyTelegramBotAPI
 openai
 cryptography
+sentry-sdk[flask]

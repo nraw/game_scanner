@@ -10,6 +10,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 try:
     import telebot
     from loguru import logger
+    import sentry_sdk
+    from sentry_sdk.integrations.logging import LoggingIntegration
 
     from game_scanner.barcode2bgg import barcode2bgg
     from game_scanner.commands import process_register_response
@@ -28,6 +30,26 @@ try:
     )
     from .telegram_handlers import TelegramHandlers
     HAS_MODULES = True
+
+    # Initialize Sentry for distributed tracing
+    SENTRY_DSN = os.getenv('SENTRY_DSN')
+    if SENTRY_DSN:
+        import logging
+        sentry_logging = LoggingIntegration(
+            level=logging.INFO,  # Capture info and above as breadcrumbs
+            event_level=logging.ERROR  # Send errors as events
+        )
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[sentry_logging],
+            traces_sample_rate=1.0,  # Capture 100% of transactions for performance monitoring
+            profiles_sample_rate=1.0,  # Profile 100% of transactions
+            environment=os.getenv('SENTRY_ENVIRONMENT', 'development')
+        )
+        logger.info("Sentry initialized for API")
+    else:
+        logger.warning("SENTRY_DSN not set, distributed tracing disabled")
+
 except ImportError as e:
     HAS_MODULES = False
     IMPORT_ERROR = str(e)
@@ -45,6 +67,29 @@ class handler(BaseHTTPRequestHandler):
         self._handle_request()
 
     def _handle_request(self):
+        # Start a new transaction for this request (if Sentry is available)
+        transaction = None
+        if HAS_MODULES and sentry_sdk:
+            transaction = sentry_sdk.start_transaction(
+                op="http.server",
+                name=f"{self.command} {self.path}",
+                source="url"
+            )
+
+            # Extract trace headers from client if present
+            baggage = self.headers.get('baggage')
+            sentry_trace = self.headers.get('sentry-trace')
+
+            if sentry_trace:
+                sentry_sdk.set_tag("client_trace_id", sentry_trace.split('-')[0] if '-' in sentry_trace else sentry_trace)
+
+            sentry_sdk.set_context("request", {
+                "method": self.command,
+                "path": self.path,
+                "headers": dict(self.headers),
+                "client_address": self.client_address[0] if self.client_address else None
+            })
+
         try:
             # Parse URL and query parameters
             parsed_url = urlparse(self.path)
@@ -118,7 +163,19 @@ class handler(BaseHTTPRequestHandler):
             print(f"Handler error: {e}")
             import traceback
             traceback.print_exc()
+
+            # Capture exception in Sentry if available
+            if HAS_MODULES and sentry_sdk:
+                sentry_sdk.capture_exception(e)
+                if transaction:
+                    transaction.set_status("internal_error")
+
             self._send_json({'error': str(e), 'type': type(e).__name__}, status=500)
+
+        finally:
+            # Finish the transaction
+            if transaction:
+                transaction.finish()
 
     def _handle_user_registration(self, params):
         """Handle user authentication (login or register)."""
@@ -492,5 +549,19 @@ class handler(BaseHTTPRequestHandler):
     def _send_response(self, content, content_type='text/plain', status=200):
         self.send_response(status)
         self.send_header('Content-Type', content_type)
+
+        # Add trace headers for distributed tracing
+        if HAS_MODULES and sentry_sdk:
+            # Get current span and add trace headers
+            span = sentry_sdk.get_current_span()
+            if span:
+                trace_header = span.to_traceparent()
+                self.send_header('sentry-trace', trace_header)
+
+                # Add trace id to response for client correlation
+                trace_id = span.trace_id
+                if trace_id:
+                    self.send_header('X-Trace-ID', trace_id)
+
         self.end_headers()
         self.wfile.write(content.encode('utf-8'))
