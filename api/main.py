@@ -19,9 +19,7 @@ try:
     from game_scanner.register_play import register_play
     from game_scanner.save_bgg_id import save_bgg_id
     from game_scanner.user_auth import (
-        create_user,
         authenticate_user,
-        login_user,
         get_user_by_api_key,
         get_user_bgg_credentials,
         verify_api_key,
@@ -77,7 +75,6 @@ class handler(BaseHTTPRequestHandler):
             )
 
             # Extract trace headers from client if present
-            baggage = self.headers.get('baggage')
             sentry_trace = self.headers.get('sentry-trace')
 
             if sentry_trace:
@@ -273,7 +270,24 @@ class handler(BaseHTTPRequestHandler):
             
         except Exception as e:
             print(f"Error in lookup: {e}")
-            self._send_json({'error': f'Lookup failed: {str(e)}'}, status=500)
+
+            # Check if it's a "not found" case vs actual error
+            error_msg = str(e).lower()
+            if 'nothing found' in error_msg or 'not found' in error_msg or 'no results' in error_msg:
+                # This is expected - barcode not in database, don't spam Sentry
+                print(f"Game not found for barcode: {query}")
+                self._send_json({'error': 'Game not found for this barcode - please identify manually'}, status=404)
+            else:
+                # Actual server error - capture in Sentry
+                if HAS_MODULES and sentry_sdk:
+                    sentry_sdk.set_context("lookup_error", {
+                        "query": query,
+                        "bgg_id": bgg_id,
+                        "bg_name": bg_name,
+                        "error_type": type(e).__name__
+                    })
+                    sentry_sdk.capture_exception(e)
+                self._send_json({'error': 'Game lookup failed - please try again or identify manually'}, status=500)
     
     def _handle_play_registration(self, params):
         """Handle play registration (premium feature requiring API key)."""
@@ -325,7 +339,19 @@ class handler(BaseHTTPRequestHandler):
             
         except Exception as e:
             print(f"Error in play registration: {e}")
-            self._send_json({'error': f'Play registration failed: {str(e)}'}, status=500)
+
+            # Capture exception in Sentry with context but send generic error to client
+            if HAS_MODULES and sentry_sdk:
+                sentry_sdk.set_context("play_registration_error", {
+                    "query": query,
+                    "bgg_id": bgg_id,
+                    "bg_name": bg_name,
+                    "has_api_key": bool(api_key),
+                    "error_type": type(e).__name__
+                })
+                sentry_sdk.capture_exception(e)
+
+            self._send_json({'error': 'Play registration failed - please try again'}, status=500)
 
     def _handle_wishlist_addition(self, params):
         """Handle adding games to user's wishlist (premium feature requiring API key)."""
@@ -388,7 +414,18 @@ class handler(BaseHTTPRequestHandler):
 
         except Exception as e:
             print(f"Error in wishlist addition: {e}")
-            self._send_json({'error': f'Wishlist addition failed: {str(e)}'}, status=500)
+
+            # Capture exception in Sentry with context but send generic error to client
+            if HAS_MODULES and sentry_sdk:
+                sentry_sdk.set_context("wishlist_error", {
+                    "query": query,
+                    "game_id": game_id,
+                    "has_api_key": bool(api_key),
+                    "error_type": type(e).__name__
+                })
+                sentry_sdk.capture_exception(e)
+
+            self._send_json({'error': 'Wishlist addition failed - please try again'}, status=500)
 
     def _handle_owned_addition(self, params):
         """Handle adding games to user's owned collection (premium feature requiring API key)."""
@@ -451,7 +488,18 @@ class handler(BaseHTTPRequestHandler):
 
         except Exception as e:
             print(f"Error in owned collection addition: {e}")
-            self._send_json({'error': f'Owned collection addition failed: {str(e)}'}, status=500)
+
+            # Capture exception in Sentry with context but send generic error to client
+            if HAS_MODULES and sentry_sdk:
+                sentry_sdk.set_context("collection_error", {
+                    "query": query,
+                    "game_id": game_id,
+                    "has_api_key": bool(api_key),
+                    "error_type": type(e).__name__
+                })
+                sentry_sdk.capture_exception(e)
+
+            self._send_json({'error': 'Collection addition failed - please try again'}, status=500)
 
     def _handle_legacy_request(self, params):
         """Handle legacy requests for backward compatibility."""
