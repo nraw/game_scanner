@@ -4,8 +4,8 @@ from loguru import logger
 class NoGoogleMatchesError(Exception):
     def __init__(self, value):
         self.value = value
-        self.message = f"lol nothing found, good luck with: {value}"
-        logger.error(self.message)
+        self.message = "lol nothing found, good luck with search query"
+        logger.error(f"{self.message}: {value}")
 
 
 class NotBGGPageError(Exception):
