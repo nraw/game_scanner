@@ -6,3 +6,6 @@ telegram:
 
 deploy:
 	vercel --prod
+
+run:
+	vercel dev

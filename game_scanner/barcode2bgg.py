@@ -1,10 +1,12 @@
 import os
 from collections import Counter
+from datetime import datetime
 from functools import lru_cache
 
 import requests
 from loguru import logger
 
+from game_scanner.db import save_document
 from game_scanner.errors import (
     NoGoogleMatchesError,
     GoogleQuotaExceededError,
@@ -53,6 +55,19 @@ def query_google(title, site=None):
         url += f"&siteSearch={site}"
     res = requests.get(url)
     response = res.json()
+
+    # Save query and response to google_searches collection
+    search_data = {
+        "query": title,
+        "site": site,
+        "response": response,
+        "timestamp": datetime.utcnow(),
+        "url": url
+    }
+    try:
+        save_document(search_data, collection_name="google_searches")
+    except Exception as e:
+        logger.error(f"Failed to save google search data: {e}")
 
     # Check for API errors first
     if "error" in response:
