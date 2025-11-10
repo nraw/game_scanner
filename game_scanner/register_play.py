@@ -110,18 +110,24 @@ def get_logged_plays(
     # Use provided username or fall back to environment variable
     username = username or os.environ["BGG_USERNAME"]
 
-    account_info = f" for {username}" if username != os.environ.get("BGG_USERNAME") else " for service account"
+    account_info = (
+        f" for {username}"
+        if username != os.environ.get("BGG_USERNAME")
+        else " for service account"
+    )
     logger.info(f"Retrieving logged plays{account_info}")
 
-    base_url = f"https://www.boardgamegeek.com/xmlapi2/plays?username={username}"
+    base_url = f"https://boardgamegeek.com/xmlapi2/plays?username={username}"
     plays = []
     page = 1
+    bgg_api_key = os.environ.get("BGG_API_KEY", "")
+    headers = {"Accept": "application/xml", "Authorization": f"Bearer {bgg_api_key}"}
 
     while True:
         url = f"{base_url}&page={page}"
         if since is not None:
             url += f"&mindate={since}"
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
         root = ET.fromstring(response.content)
         all_plays = root.findall("play")
@@ -187,7 +193,11 @@ def delete_logged_play(play_id, username=None, password=None):
             headers=headers,
         )
 
-    account_info = f" from {username}'s account" if username != os.environ.get("BGG_USERNAME") else " from service account"
+    account_info = (
+        f" from {username}'s account"
+        if username != os.environ.get("BGG_USERNAME")
+        else " from service account"
+    )
     logger.info(f"Deleted play {play_id}{account_info}")
     return r.text
 

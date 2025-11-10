@@ -12,7 +12,11 @@ def get_my_games(player_count, username=None, password=None):
     # Use provided username or fall back to environment variable
     username = username or os.environ.get("BGG_USERNAME", "nraw")
 
-    account_info = f" for {username}" if username != os.environ.get("BGG_USERNAME", "nraw") else " for service account"
+    account_info = (
+        f" for {username}"
+        if username != os.environ.get("BGG_USERNAME", "nraw")
+        else " for service account"
+    )
     logger.info(f"Retrieving game collection{account_info}")
 
     games = filter_games_by_playercount(username, player_count)
@@ -21,7 +25,9 @@ def get_my_games(player_count, username=None, password=None):
 
 def get_all_games(username):
     url = f"https://boardgamegeek.com/xmlapi2/collection?username={username}&own=1"
-    response = requests.get(url)
+    bgg_api_key = os.environ.get("BGG_API_KEY", "")
+    headers = {"Authorization": f"Bearer {bgg_api_key}"}
+    response = requests.get(url, headers=headers)
 
     if response.status_code == 200:
         root = ET.fromstring(response.content)
@@ -38,7 +44,9 @@ def get_all_games(username):
 @lru_cache(maxsize=1000)
 def get_game_details(game_id):
     url = f"https://boardgamegeek.com/xmlapi2/thing?id={game_id}"
-    response = requests.get(url)
+    bgg_api_key = os.environ.get("BGG_API_KEY", "")
+    headers = {"Authorization": f"Bearer {bgg_api_key}"}
+    response = requests.get(url, headers=headers)
 
     if response.status_code == 200:
         root = ET.fromstring(response.content)
