@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
@@ -23,6 +24,7 @@ try:
         get_user_by_api_key,
         get_user_bgg_credentials,
         verify_api_key,
+        verify_and_get_credentials,
         list_all_users,
         delete_user
     )
@@ -295,7 +297,7 @@ class handler(BaseHTTPRequestHandler):
         query = params.get("query")
         bgg_id = params.get("bgg_id")
         bg_name = params.get("bg_name")
-        
+
         # Check API key
         if not api_key:
             self._send_json({
@@ -303,40 +305,39 @@ class handler(BaseHTTPRequestHandler):
                 'instructions': 'Get an API key by registering at /register'
             }, status=401)
             return
-            
-        if not verify_api_key(api_key):
-            self._send_json({'error': 'Invalid API key'}, status=401)
-            return
-            
+
         if not query:
             self._send_json({'error': 'Missing query parameter'}, status=400)
             return
-            
+
         try:
-            # Get game ID
-            game_id = self._get_game_id(bgg_id, bg_name, query)
-            
-            # Get user's BGG credentials
-            bgg_credentials = get_user_bgg_credentials(api_key)
+            # Parallel lookup: get game ID and verify credentials simultaneously
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                game_future = executor.submit(self._get_game_id, bgg_id, bg_name, query)
+                creds_future = executor.submit(verify_and_get_credentials, api_key)
+
+                game_id = game_future.result()
+                bgg_credentials = creds_future.result()
+
             if not bgg_credentials:
-                self._send_json({'error': 'Failed to retrieve user credentials'}, status=500)
+                self._send_json({'error': 'Invalid API key'}, status=401)
                 return
-                
+
             username, password = bgg_credentials
-            
+
             # Register the play with user's credentials
             result = register_play(game_id, username, password)
             print(f"Play registration result: {result}")
-            
+
             # Save the mapping
             save_bgg_id(query, game_id, extra={"auto": not ((bgg_id or bg_name) and query)})
-            
+
             self._send_json({
                 'message': 'Play registered successfully',
                 'game_id': game_id,
                 'url': f"https://www.boardgamegeek.com/boardgame/{game_id}"
             })
-            
+
         except Exception as e:
             print(f"Error in play registration: {e}")
 
@@ -369,10 +370,6 @@ class handler(BaseHTTPRequestHandler):
             }, status=401)
             return
 
-        if not verify_api_key(api_key):
-            self._send_json({'error': 'Invalid API key'}, status=401)
-            return
-
         # Need either query, game_id, or identifiers to determine the game
         if not any([query, game_id, bgg_id, bg_name]):
             self._send_json({
@@ -381,16 +378,21 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # Get game ID if not directly provided
+            # Parallel lookup: get game ID and verify credentials simultaneously
             if game_id:
+                # If game_id provided directly, only need to verify credentials
+                bgg_credentials = verify_and_get_credentials(api_key)
                 final_game_id = game_id
             else:
-                final_game_id = self._get_game_id(bgg_id, bg_name, query)
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    game_future = executor.submit(self._get_game_id, bgg_id, bg_name, query)
+                    creds_future = executor.submit(verify_and_get_credentials, api_key)
 
-            # Get user's BGG credentials
-            bgg_credentials = get_user_bgg_credentials(api_key)
+                    final_game_id = game_future.result()
+                    bgg_credentials = creds_future.result()
+
             if not bgg_credentials:
-                self._send_json({'error': 'Failed to retrieve user credentials'}, status=500)
+                self._send_json({'error': 'Invalid API key'}, status=401)
                 return
 
             username, password = bgg_credentials
@@ -443,10 +445,6 @@ class handler(BaseHTTPRequestHandler):
             }, status=401)
             return
 
-        if not verify_api_key(api_key):
-            self._send_json({'error': 'Invalid API key'}, status=401)
-            return
-
         # Need either query, game_id, or identifiers to determine the game
         if not any([query, game_id, bgg_id, bg_name]):
             self._send_json({
@@ -455,16 +453,21 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # Get game ID if not directly provided
+            # Parallel lookup: get game ID and verify credentials simultaneously
             if game_id:
+                # If game_id provided directly, only need to verify credentials
+                bgg_credentials = verify_and_get_credentials(api_key)
                 final_game_id = game_id
             else:
-                final_game_id = self._get_game_id(bgg_id, bg_name, query)
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    game_future = executor.submit(self._get_game_id, bgg_id, bg_name, query)
+                    creds_future = executor.submit(verify_and_get_credentials, api_key)
 
-            # Get user's BGG credentials
-            bgg_credentials = get_user_bgg_credentials(api_key)
+                    final_game_id = game_future.result()
+                    bgg_credentials = creds_future.result()
+
             if not bgg_credentials:
-                self._send_json({'error': 'Failed to retrieve user credentials'}, status=500)
+                self._send_json({'error': 'Invalid API key'}, status=401)
                 return
 
             username, password = bgg_credentials

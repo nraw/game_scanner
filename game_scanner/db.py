@@ -5,6 +5,9 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from loguru import logger
 
+# Module-level singleton for Firestore client
+_db_client = None
+
 
 def get_collection(collection_name="games"):
     db = get_db_connection()
@@ -13,20 +16,23 @@ def get_collection(collection_name="games"):
 
 
 def get_db_connection():
+    global _db_client
+    if _db_client is not None:
+        return _db_client
+
     firestore_key = os.environ.get("FIRESTORE_KEY")
-    if firestore_key:
-        firestore_creds = json.loads(firestore_key)
-        cred = credentials.Certificate(firestore_creds)
-    else:
-        cred = credentials.Certificate("nraw-key.json")
+    if not firestore_key:
+        raise ValueError("FIRESTORE_KEY environment variable is required")
+    firestore_creds = json.loads(firestore_key)
+    cred = credentials.Certificate(firestore_creds)
 
     try:
-        app = firebase_admin.initialize_app(cred)
+        firebase_admin.initialize_app(cred)
     except ValueError:
         pass
 
-    db = firestore.client()
-    return db
+    _db_client = firestore.client()
+    return _db_client
 
 
 def save_document(data, collection_name="games"):
@@ -41,6 +47,7 @@ def retrieve_document(query, collection_name="games"):
     docs = (
         c.where("query", "==", query)
         .order_by("added_at", direction=firestore.Query.DESCENDING)
+        .limit(1)
         .stream()
     )
     try:

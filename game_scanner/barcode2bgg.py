@@ -1,4 +1,5 @@
 import os
+import threading
 from collections import Counter
 from datetime import datetime
 from functools import lru_cache
@@ -7,6 +8,14 @@ import requests
 from loguru import logger
 
 from game_scanner.db import save_document
+
+
+def _save_search_async(search_data):
+    """Save Google search data asynchronously to avoid blocking the response."""
+    try:
+        save_document(search_data, collection_name="google_searches")
+    except Exception as e:
+        logger.error(f"Failed to save google search data: {e}")
 from game_scanner.errors import (
     NoGoogleMatchesError,
     GoogleQuotaExceededError,
@@ -56,7 +65,7 @@ def query_google(title, site=None):
     res = requests.get(url)
     response = res.json()
 
-    # Save query and response to google_searches collection
+    # Save query and response to google_searches collection asynchronously
     search_data = {
         "query": title,
         "site": site,
@@ -64,10 +73,7 @@ def query_google(title, site=None):
         "timestamp": datetime.utcnow(),
         "url": url
     }
-    try:
-        save_document(search_data, collection_name="google_searches")
-    except Exception as e:
-        logger.error(f"Failed to save google search data: {e}")
+    threading.Thread(target=_save_search_async, args=(search_data,), daemon=True).start()
 
     # Check for API errors first
     if "error" in response:

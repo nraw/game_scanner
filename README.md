@@ -8,13 +8,13 @@ A multi-user API service for scanning board game barcodes and registering plays 
 
 ## 🎯 Features
 
-### 🆓 Free Features
+### 🆓 Nonregistered Features
 - **Barcode Lookup** - Convert any barcode to BGG game ID
 - **Game Name Search** - Find games by name instead of barcode
 - **Web Interface** - Simple HTML form for quick lookups
 - **Redirect to BGG** - Direct links to game pages
 
-### 🔐 Premium Features (API Key Required)
+### 🔐 Registered Features
 - **Play Registration** - Log plays directly to your BGG account
 - **Personal Credentials** - Uses your BGG username/password
 - **Secure Storage** - Encrypted credential storage
@@ -149,6 +149,7 @@ FIRESTORE_KEY={"type":"service_account","project_id":"..."}
 **Vercel (Primary):**
 ```bash
 vercel --prod
+# Moved main function to `api/main.py` (Vercel serverless function)
 ```
 
 **Google Cloud Functions (Legacy):**

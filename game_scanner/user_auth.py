@@ -187,6 +187,25 @@ def verify_api_key(api_key: str) -> bool:
     return get_user_by_api_key(api_key) is not None
 
 
+def verify_and_get_credentials(api_key: str) -> Optional[Tuple[str, str]]:
+    """Verify API key and return decrypted credentials in a single DB read.
+
+    Returns None if API key is invalid, otherwise returns (username, password).
+    This is more efficient than calling verify_api_key() then get_user_bgg_credentials()
+    separately, as it only performs one database read.
+    """
+    user = get_user_by_api_key(api_key)
+    if not user:
+        return None
+
+    try:
+        encryption_key = base64.b64decode(user["encryption_key"].encode())
+        return decrypt_credentials(user["encrypted_credentials"], encryption_key)
+    except Exception as e:
+        logger.error(f"Error decrypting credentials: {e}")
+        return None
+
+
 def delete_user(api_key: str) -> bool:
     """Delete a user account and all associated data."""
     try:
