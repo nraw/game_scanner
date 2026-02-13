@@ -251,36 +251,75 @@ class handler(BaseHTTPRequestHandler):
         bgg_id = params.get("bgg_id")
         bg_name = params.get("bg_name")
         is_redirect = "redirect" in params
-        
+
         if not query:
             self._send_json({'error': 'Missing query parameter'}, status=400)
             return
-            
+
         try:
             game_id = self._get_game_id(bgg_id, bg_name, query)
-            
+
             # Save the mapping
             save_bgg_id(query, game_id, extra={"auto": not ((bgg_id or bg_name) and query)})
-            
+
             url = f"https://www.boardgamegeek.com/boardgame/{game_id}"
-            
+
             if is_redirect:
                 self._send_redirect(url)
                 return
-                
+
             self._send_json({'game_id': game_id, 'url': url})
-            
+
         except Exception as e:
             print(f"Error in lookup: {e}")
 
-            # Check if it's a "not found" case vs actual error
-            error_msg = str(e).lower()
-            if 'nothing found' in error_msg or 'not found' in error_msg or 'no results' in error_msg:
+            # Import error types for proper exception handling
+            from game_scanner.errors import (
+                NoGoogleMatchesError,
+                GoogleQuotaExceededError,
+                GoogleAPIError
+            )
+
+            # Handle specific exception types instead of string matching
+            if isinstance(e, NoGoogleMatchesError):
                 # This is expected - barcode not in database, don't spam Sentry
                 print(f"Game not found for barcode: {query}")
-                self._send_json({'error': 'Game not found for this barcode - please identify manually'}, status=404)
+                self._send_json({
+                    'error': 'Game not found for this barcode - please identify manually'
+                }, status=404)
+
+            elif isinstance(e, GoogleQuotaExceededError):
+                # Google API quota exceeded - inform user and suggest donation
+                print(f"Google API quota exceeded for query: {query}")
+                if HAS_MODULES and sentry_sdk:
+                    sentry_sdk.set_context("quota_error", {
+                        "query": query,
+                        "error_message": str(e)
+                    })
+                    sentry_sdk.capture_exception(e)
+                self._send_json({
+                    'error': "Daily API quota reached (like, for everyone, not just you, apologies). This is still an unfunded project - if you'd like to help increase the limits, consider a small donation, otherwise please try again tomorrow! ❤️",
+                    'type': 'GoogleQuotaExceededError'
+                }, status=429)
+
+            elif isinstance(e, GoogleAPIError):
+                # Google API error (not quota) - log and return server error
+                print(f"Google API error for query {query}: {e}")
+                if HAS_MODULES and sentry_sdk:
+                    sentry_sdk.set_context("google_api_error", {
+                        "query": query,
+                        "error_code": getattr(e, 'error_code', None),
+                        "error_message": getattr(e, 'error_message', str(e))
+                    })
+                    sentry_sdk.capture_exception(e)
+                self._send_json({
+                    'error': 'Game lookup service temporarily unavailable - please try again',
+                    'type': 'GoogleAPIError'
+                }, status=503)
+
             else:
-                # Actual server error - capture in Sentry
+                # Unexpected server error - capture in Sentry
+                print(f"Unexpected error in lookup: {type(e).__name__}: {e}")
                 if HAS_MODULES and sentry_sdk:
                     sentry_sdk.set_context("lookup_error", {
                         "query": query,
@@ -289,7 +328,9 @@ class handler(BaseHTTPRequestHandler):
                         "error_type": type(e).__name__
                     })
                     sentry_sdk.capture_exception(e)
-                self._send_json({'error': 'Game lookup failed - please try again or identify manually'}, status=500)
+                self._send_json({
+                    'error': 'Game lookup failed - please try again or identify manually'
+                }, status=500)
     
     def _handle_play_registration(self, params):
         """Handle play registration (premium feature requiring API key)."""
