@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 from datetime import date, datetime
 from typing import List, Optional
 
+import cloudscraper
 import requests
 from loguru import logger
 
@@ -46,26 +47,23 @@ def register_to_bgg(play_payload, username=None, password=None):
     password = password or os.environ["BGG_PASS"]
 
     login_payload = {"credentials": {"username": username, "password": password}}
-    headers = {"content-type": "application/json"}
 
-    with requests.Session() as s:
-        login_response = s.post(
-            "https://boardgamegeek.com/login/api/v1",
-            data=json.dumps(login_payload),
-            headers=headers,
-        )
-        if not login_response.ok:
-            logger.error(f"BGG login failed for user '{username}': {login_response.status_code} - {login_response.text}")
-            raise ValueError(f"BGG login failed for user '{username}': {login_response.status_code}")
+    s = cloudscraper.create_scraper()
+    login_response = s.post(
+        "https://boardgamegeek.com/login/api/v1",
+        json=login_payload,
+    )
+    if not login_response.ok:
+        logger.error(f"BGG login failed for user '{username}': {login_response.status_code} - {login_response.text}")
+        raise ValueError(f"BGG login failed for user '{username}': {login_response.status_code}")
 
-        r = s.post(
-            "https://boardgamegeek.com/geekplay.php",
-            data=json.dumps(play_payload),
-            headers=headers,
-        )
-        if r.status_code != 200:
-            logger.error(f"BGG play registration failed for user '{username}': {r.status_code} - {r.text}")
-            raise ValueError(f"BGG play registration failed for user '{username}': {r.status_code}")
+    r = s.post(
+        "https://boardgamegeek.com/geekplay.php",
+        json=play_payload,
+    )
+    if r.status_code != 200:
+        logger.error(f"BGG play registration failed for user '{username}': {r.status_code} - {r.text}")
+        raise ValueError(f"BGG play registration failed for user '{username}': {r.status_code}")
 
     return r
 
@@ -185,26 +183,23 @@ def delete_logged_play(play_id, username=None, password=None):
 
     login_payload = {"credentials": {"username": username, "password": password}}
     delete_play_payload = get_delete_play_payload(play_id)
-    headers = {"content-type": "application/json"}
 
-    with requests.Session() as s:
-        login_response = s.post(
-            "https://boardgamegeek.com/login/api/v1",
-            data=json.dumps(login_payload),
-            headers=headers,
-        )
-        if not login_response.ok:
-            logger.error(f"BGG login failed for user '{username}': {login_response.status_code} - {login_response.text}")
-            raise ValueError(f"BGG login failed for user '{username}': {login_response.status_code}")
+    s = cloudscraper.create_scraper()
+    login_response = s.post(
+        "https://boardgamegeek.com/login/api/v1",
+        json=login_payload,
+    )
+    if not login_response.ok:
+        logger.error(f"BGG login failed for user '{username}': {login_response.status_code} - {login_response.text}")
+        raise ValueError(f"BGG login failed for user '{username}': {login_response.status_code}")
 
-        r = s.post(
-            "https://boardgamegeek.com/geekplay.php",
-            data=json.dumps(delete_play_payload),
-            headers=headers,
-        )
-        if r.status_code != 200:
-            logger.error(f"BGG play deletion failed for user '{username}': {r.status_code} - {r.text}")
-            raise ValueError(f"BGG play deletion failed for user '{username}': {r.status_code}")
+    r = s.post(
+        "https://boardgamegeek.com/geekplay.php",
+        json=delete_play_payload,
+    )
+    if r.status_code != 200:
+        logger.error(f"BGG play deletion failed for user '{username}': {r.status_code} - {r.text}")
+        raise ValueError(f"BGG play deletion failed for user '{username}': {r.status_code}")
 
     account_info = (
         f" from {username}'s account"
