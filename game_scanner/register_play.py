@@ -54,7 +54,7 @@ def register_to_bgg(play_payload, username=None, password=None):
             data=json.dumps(login_payload),
             headers=headers,
         )
-        if login_response.status_code != 200:
+        if not login_response.ok:
             logger.error(f"BGG login failed for user '{username}': {login_response.status_code} - {login_response.text}")
             raise ValueError(f"BGG login failed for user '{username}': {login_response.status_code}")
 
@@ -193,7 +193,7 @@ def delete_logged_play(play_id, username=None, password=None):
             data=json.dumps(login_payload),
             headers=headers,
         )
-        if login_response.status_code != 200:
+        if not login_response.ok:
             logger.error(f"BGG login failed for user '{username}': {login_response.status_code} - {login_response.text}")
             raise ValueError(f"BGG login failed for user '{username}': {login_response.status_code}")
 
