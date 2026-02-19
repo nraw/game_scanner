@@ -49,17 +49,24 @@ def register_to_bgg(play_payload, username=None, password=None):
     headers = {"content-type": "application/json"}
 
     with requests.Session() as s:
-        _ = s.post(
+        login_response = s.post(
             "https://boardgamegeek.com/login/api/v1",
             data=json.dumps(login_payload),
             headers=headers,
         )
+        if login_response.status_code != 200:
+            logger.error(f"BGG login failed for user '{username}': {login_response.status_code} - {login_response.text}")
+            raise ValueError(f"BGG login failed for user '{username}': {login_response.status_code}")
 
         r = s.post(
             "https://boardgamegeek.com/geekplay.php",
             data=json.dumps(play_payload),
             headers=headers,
         )
+        if r.status_code != 200:
+            logger.error(f"BGG play registration failed for user '{username}': {r.status_code} - {r.text}")
+            raise ValueError(f"BGG play registration failed for user '{username}': {r.status_code}")
+
     return r
 
 
@@ -181,17 +188,23 @@ def delete_logged_play(play_id, username=None, password=None):
     headers = {"content-type": "application/json"}
 
     with requests.Session() as s:
-        _ = s.post(
+        login_response = s.post(
             "https://boardgamegeek.com/login/api/v1",
             data=json.dumps(login_payload),
             headers=headers,
         )
+        if login_response.status_code != 200:
+            logger.error(f"BGG login failed for user '{username}': {login_response.status_code} - {login_response.text}")
+            raise ValueError(f"BGG login failed for user '{username}': {login_response.status_code}")
 
         r = s.post(
             "https://boardgamegeek.com/geekplay.php",
             data=json.dumps(delete_play_payload),
             headers=headers,
         )
+        if r.status_code != 200:
+            logger.error(f"BGG play deletion failed for user '{username}': {r.status_code} - {r.text}")
+            raise ValueError(f"BGG play deletion failed for user '{username}': {r.status_code}")
 
     account_info = (
         f" from {username}'s account"

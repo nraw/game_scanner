@@ -379,6 +379,23 @@ class handler(BaseHTTPRequestHandler):
                 'url': f"https://www.boardgamegeek.com/boardgame/{game_id}"
             })
 
+        except ValueError as e:
+            error_msg = str(e)
+            print(f"Play registration failed: {error_msg}")
+
+            if HAS_MODULES and sentry_sdk:
+                sentry_sdk.set_context("play_registration_error", {
+                    "query": query,
+                    "bgg_id": bgg_id,
+                    "bg_name": bg_name,
+                    "username": username if 'username' in dir() else None,
+                    "error": error_msg,
+                })
+                sentry_sdk.capture_exception(e)
+
+            status = 401 if "login failed" in error_msg.lower() else 502
+            self._send_json({'error': error_msg}, status=status)
+
         except Exception as e:
             print(f"Error in play registration: {e}")
 
