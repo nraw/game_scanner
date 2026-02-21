@@ -1,7 +1,12 @@
 import os
 
+import structlog
 import telebot
-from loguru import logger
+
+from game_scanner.logging import setup_logging
+
+setup_logging()
+logger = structlog.get_logger()
 
 from game_scanner.commands import set_it, spike_it
 from game_scanner.db import retrieve_messages, save_document
@@ -17,7 +22,7 @@ bot = telebot.TeleBot(os.environ["TELEGRAM_TOKEN"], parse_mode="Markdown")
 
 @bot.message_handler(commands=["start"])
 def send_welcome(message):
-    logger.info(message)
+    logger.info("command received", command="start", user_id=message.from_user.id)
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
 
@@ -73,7 +78,7 @@ Quick actions:
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
-    logger.info(call)
+    logger.info("callback received", callback_data=call.data, user_id=call.from_user.id)
 
     # Legacy callback handlers
     if call.data.startswith("pl"):
@@ -312,7 +317,7 @@ Thank you for upgrading! 🎯"""
 
             bot.send_message(user_id, user_notification)
         except Exception as e:
-            logger.error(f"Could not notify user {user_id} of approval: {e}")
+            logger.error("could not notify user of approval", user_id=user_id, error=str(e))
             bot.send_message(
                 call.message.chat.id,
                 f"⚠️ Upgrade successful but couldn't notify user {user_id}",
@@ -352,7 +357,7 @@ Thank you for your understanding. 🙏"""
 
         bot.send_message(user_id, user_notification)
     except Exception as e:
-        logger.error(f"Could not notify user {user_id} of denial: {e}")
+        logger.error("could not notify user of denial", user_id=user_id, error=str(e))
         bot.send_message(
             call.message.chat.id, f"⚠️ Request denied but couldn't notify user {user_id}"
         )
@@ -393,7 +398,7 @@ Thank you for using BGG Logger Bot. If you ever want to use the service again, y
 
 Goodbye! 👋"""
         )
-        logger.info(f"Successfully deleted account for Telegram user {user_id}")
+        logger.info("account deleted", user_id=user_id)
         
     else:
         # Show error message
@@ -411,7 +416,7 @@ Goodbye! 👋"""
 
 Your account remains active."""
         )
-        logger.error(f"Failed to delete account for Telegram user {user_id}")
+        logger.error("failed to delete account", user_id=user_id)
 
 
 def handle_cancel_delete_callback(call):
@@ -466,14 +471,14 @@ Don't have a BGG account yet? Create one at boardgamegeek.com first!
 
 @bot.message_handler(commands=["play"])
 def send_play(message):
-    logger.info(message)
+    logger.info("command received", command="play", user_id=message.from_user.id)
     message.text = " ".join(message.text.split()[1:])
     perform_step(message)
 
 
 @bot.message_handler(commands=["register"])
 def handle_register(message):
-    logger.info(message)
+    logger.info("command received", command="register", user_id=message.from_user.id)
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
 
@@ -510,7 +515,7 @@ Choose how you'd like to register:"""
 
 @bot.message_handler(commands=["register_with_bgg"])
 def handle_register_with_bgg(message):
-    logger.info(message)
+    logger.info("command received", command="register_with_bgg", user_id=message.from_user.id)
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
 
@@ -563,7 +568,7 @@ Your BGG account *{bgg_username}* is now connected.
             )
 
     except Exception as e:
-        logger.error(f"Registration error: {e}")
+        logger.error("registration error", error=str(e))
         if "already registered" in str(e):
             recovery_text = """❌ This BGG username is already registered.
 
@@ -583,7 +588,7 @@ Note: Each BGG account can only be linked to one Telegram user for security."""
 
 @bot.message_handler(commands=["help"])
 def handle_help(message):
-    logger.info(message)
+    logger.info("command received", command="help", user_id=message.from_user.id)
     help_text = """🎲 *BGG Logger Bot Help*
 
 *Main Commands:*
@@ -625,7 +630,7 @@ Just talk to me naturally about board games and I'll understand what you want to
 
 @bot.message_handler(commands=["commands"])
 def handle_commands(message):
-    logger.info(message)
+    logger.info("command received", command="commands", user_id=message.from_user.id)
     user_id = message.from_user.id
     is_user, _ = check_is_user(user_id)
 
@@ -662,7 +667,7 @@ def handle_commands(message):
 
 @bot.message_handler(commands=["credits"])
 def handle_credits(message):
-    logger.info(message)
+    logger.info("command received", command="credits", user_id=message.from_user.id)
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
 
@@ -704,7 +709,7 @@ Unable to retrieve detailed account information."""
 
 @bot.message_handler(commands=["upgrade"])
 def handle_upgrade(message):
-    logger.info(message)
+    logger.info("command received", command="upgrade", user_id=message.from_user.id)
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
 
@@ -753,7 +758,7 @@ Click "Request Premium" below to send an upgrade request to our admin for manual
 @bot.message_handler(commands=["admin_upgrade"])
 def handle_admin_upgrade(message):
     """Admin-only command to upgrade users. Requires admin authorization."""
-    logger.info(message)
+    logger.info("command received", command="admin_upgrade", user_id=message.from_user.id)
     user_id = message.from_user.id
 
     # Check if user is admin (you would implement proper admin check here)
@@ -810,7 +815,7 @@ Your account has been upgraded to **Premium**!
 
             bot.send_message(target_user_id, notification)
         except Exception as e:
-            logger.error(f"Could not notify user {target_user_id}: {e}")
+            logger.error("could not notify user", user_id=target_user_id, error=str(e))
 
     else:
         bot.reply_to(message, f"❌ Failed to upgrade user {target_user_id}.")
@@ -818,7 +823,7 @@ Your account has been upgraded to **Premium**!
 
 @bot.message_handler(commands=["delete_account"])
 def handle_delete_account(message):
-    logger.info(message)
+    logger.info("command received", command="delete_account", user_id=message.from_user.id)
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
 
@@ -860,7 +865,7 @@ Are you sure you want to proceed?"""
 
 @bot.message_handler(commands=["version"])
 def get_sha(message):
-    logger.info(message)
+    logger.info("command received", command="version", user_id=message.from_user.id)
     bot.send_chat_action(message.chat.id, "typing")
     sha = os.popen("git rev-parse HEAD").read().strip()
     bot.reply_to(message, str(sha))
@@ -869,19 +874,19 @@ def get_sha(message):
 @bot.message_handler(content_types=['web_app_data'])
 def handle_web_app_data(message):
     """Handle data sent from Telegram Mini App."""
-    logger.info(f"Received web app data from user {message.from_user.id}: {message.web_app_data.data}")
+    logger.info("received web app data", user_id=message.from_user.id, data=message.web_app_data.data)
 
     try:
         import json
         data = json.loads(message.web_app_data.data)
-        logger.info(f"Parsed web app data: {data}")
+        logger.info("parsed web app data", action=data.get('action'))
 
         if data.get('action') == 'registration_success':
             api_key = data.get('api_key')
             bgg_username = data.get('bgg_username')
             first_name = message.from_user.first_name or 'there'
 
-            logger.info(f"Processing registration success for {first_name} (BGG: {bgg_username})")
+            logger.info("processing registration success", first_name=first_name, bgg_username=bgg_username)
 
             success_text = f"""🎉 Registration successful, {first_name}!
 
@@ -902,17 +907,17 @@ Your BGG account *{bgg_username}* is now connected.
 /commands - Quick action menu"""
 
             reply = bot.reply_to(message, success_text)
-            logger.info(f"Sent registration success message to user {message.from_user.id}, message ID: {reply.message_id}")
+            logger.info("sent registration success message", user_id=message.from_user.id, message_id=reply.message_id)
 
         else:
-            logger.warning(f"Unknown web app action received: {data.get('action')}")
+            logger.warning("unknown web app action", action=data.get('action'))
             bot.reply_to(message, "Unknown web app action received.")
 
     except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error in web app data: {e}")
+        logger.error("JSON decode error in web app data", error=str(e))
         bot.reply_to(message, "Invalid data received from web app.")
     except Exception as e:
-        logger.error(f"Error handling web app data: {e}")
+        logger.error("error handling web app data", error=str(e))
         import traceback
         traceback.print_exc()
         bot.reply_to(message, "An error occurred processing your registration.")
@@ -920,7 +925,7 @@ Your BGG account *{bgg_username}* is now connected.
 
 @bot.message_handler(func=lambda message: True)
 def next_step(message: telebot.types.Message):
-    logger.info(message)
+    logger.info("message received", user_id=message.from_user.id, text=message.text)
     perform_step(message)
 
 
@@ -978,13 +983,13 @@ Ready to get started? 🎲"""
                 credentials = get_user_bgg_credentials(user_data['api_key'])
                 if credentials:
                     bgg_username, bgg_password = credentials
-                    logger.info(f"Retrieved BGG credentials for Telegram user {user_id} (BGG: {bgg_username})")
+                    logger.info("retrieved BGG credentials", user_id=user_id, bgg_username=bgg_username)
                 else:
-                    logger.warning(f"Could not decrypt BGG credentials for Telegram user {user_id}")
+                    logger.warning("could not decrypt BGG credentials", user_id=user_id)
             else:
-                logger.warning(f"No API key found for Telegram user {user_id}")
+                logger.warning("no API key found", user_id=user_id)
         except Exception as e:
-            logger.error(f"Error retrieving BGG credentials for Telegram user {user_id}: {e}")
+            logger.error("error retrieving BGG credentials", user_id=user_id, error=str(e))
 
         answer = None
         i = 0

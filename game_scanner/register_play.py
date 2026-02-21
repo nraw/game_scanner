@@ -6,7 +6,9 @@ from typing import List, Optional
 
 import cloudscraper
 import requests
-from loguru import logger
+import structlog
+
+logger = structlog.get_logger()
 
 from game_scanner.schemas import PlayPayload
 
@@ -24,7 +26,7 @@ def log_play_to_bgg(username=None, password=None, **play_payload_raw):
         if not username:  # Service account
             update_my_board_games()
     except Exception as e:
-        logger.warning(f"Failed to update my_board_games: {e}")
+        logger.warning("failed to update my_board_games", error=str(e))
 
     account_info = f" to {username}'s account" if username else " to service account"
     response_text = f"Successfully logged play{account_info}: {play_payload}"
@@ -54,7 +56,7 @@ def register_to_bgg(play_payload, username=None, password=None):
         json=login_payload,
     )
     if not login_response.ok:
-        logger.error(f"BGG login failed for user '{username}': {login_response.status_code} - {login_response.text}")
+        logger.error("BGG login failed", username=username, status_code=login_response.status_code, response=login_response.text)
         raise ValueError(f"BGG login failed for user '{username}': {login_response.status_code}")
 
     r = s.post(
@@ -62,7 +64,7 @@ def register_to_bgg(play_payload, username=None, password=None):
         json=play_payload,
     )
     if r.status_code != 200:
-        logger.error(f"BGG play registration failed for user '{username}': {r.status_code} - {r.text}")
+        logger.error("BGG play registration failed", username=username, status_code=r.status_code, response=r.text)
         raise ValueError(f"BGG play registration failed for user '{username}': {r.status_code}")
 
     return r
@@ -120,7 +122,7 @@ def get_logged_plays(
         if username != os.environ.get("BGG_USERNAME")
         else " for service account"
     )
-    logger.info(f"Retrieving logged plays{account_info}")
+    logger.info("retrieving logged plays", username=username)
 
     base_url = f"https://boardgamegeek.com/xmlapi2/plays?username={username}"
     plays = []
@@ -190,7 +192,7 @@ def delete_logged_play(play_id, username=None, password=None):
         json=login_payload,
     )
     if not login_response.ok:
-        logger.error(f"BGG login failed for user '{username}': {login_response.status_code} - {login_response.text}")
+        logger.error("BGG login failed", username=username, status_code=login_response.status_code, response=login_response.text)
         raise ValueError(f"BGG login failed for user '{username}': {login_response.status_code}")
 
     r = s.post(
@@ -198,7 +200,7 @@ def delete_logged_play(play_id, username=None, password=None):
         json=delete_play_payload,
     )
     if r.status_code != 200:
-        logger.error(f"BGG play deletion failed for user '{username}': {r.status_code} - {r.text}")
+        logger.error("BGG play deletion failed", username=username, status_code=r.status_code, response=r.text)
         raise ValueError(f"BGG play deletion failed for user '{username}': {r.status_code}")
 
     account_info = (
@@ -206,7 +208,7 @@ def delete_logged_play(play_id, username=None, password=None):
         if username != os.environ.get("BGG_USERNAME")
         else " from service account"
     )
-    logger.info(f"Deleted play {play_id}{account_info}")
+    logger.info("deleted play", play_id=play_id, username=username)
     return r.text
 
 
@@ -231,6 +233,6 @@ def update_my_board_games():
         data = {"event_type": "webhook"}
         url = "https://api.github.com/repos/nraw/my_board_games/dispatches"
         r = requests.post(url, headers=headers, json=data)
-        logger.info(f"Triggered update to my_board_games: {r.status_code}")
+        logger.info("triggered update to my_board_games", status_code=r.status_code)
     except:
-        logger.error("Failed to update my_board_games")
+        logger.error("failed to update my_board_games")

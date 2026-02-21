@@ -3,7 +3,9 @@ import os
 
 import firebase_admin
 from firebase_admin import credentials, firestore
-from loguru import logger
+import structlog
+
+logger = structlog.get_logger()
 
 # Module-level singleton for Firestore client
 _db_client = None
@@ -38,7 +40,7 @@ def get_db_connection():
 def save_document(data, collection_name="games"):
     c = get_collection(collection_name=collection_name)
     c.add(data)
-    logger.info(f"Saved document: {data}")
+    logger.info("saved document", data=data)
 
 
 def retrieve_document(query, collection_name="games"):
@@ -54,9 +56,9 @@ def retrieve_document(query, collection_name="games"):
         doc = next(docs)
         data = doc.to_dict()
         bgg_id = data.get("bgg_id", "")
-        logger.info(f"Retrieved bgg_id: {bgg_id}")
+        logger.info("retrieved bgg_id", bgg_id=bgg_id)
     except StopIteration:
-        logger.info(f"No bgg_id for query: {query}")
+        logger.info("no bgg_id found", query=query)
         pass
     return bgg_id
 
@@ -67,9 +69,9 @@ def retrieve_play_request(message_id):
     try:
         doc = next(docs)
         doc_data = doc.to_dict()
-        logger.info(f"Retrieved play request: {doc_data}")
+        logger.info("retrieved play request", doc_data=doc_data)
     except StopIteration:
-        logger.info(f"No play request for message_id: {message_id}")
+        logger.info("no play request found", message_id=message_id)
         doc_data = {}
     return doc_data
 
@@ -81,8 +83,8 @@ def retrieve_messages(message_id):
         doc = next(docs)
         doc_data = doc.to_dict()
         previous_messages = doc_data.get("messages", [])
-        logger.info(f"Retrieved play request: {doc_data}")
+        logger.info("retrieved messages", message_id=message_id)
     except StopIteration:
-        logger.info(f"No play request for message_id: {message_id}")
+        logger.info("no messages found", message_id=message_id)
         previous_messages = []
     return previous_messages

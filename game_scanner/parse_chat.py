@@ -3,7 +3,9 @@ import os
 from datetime import date
 
 import openai
-from loguru import logger
+import structlog
+
+logger = structlog.get_logger()
 
 from game_scanner.add_wishlist import add_wishlist, add_owned
 from game_scanner.list_my_games import get_my_games
@@ -54,7 +56,7 @@ def parse_chat(messages: list[dict], bgg_username=None, bgg_password=None):
     try:
         text, params_raw = ping_gpt(client, gpt_messages)
     except openai.RateLimitError as e:
-        logger.error(e)
+        logger.error("rate limit exceeded", error=str(e))
         answer = "Rate limit exceeded. Am I in trouble? (•̪ o •̪)"
         return messages, answer
     if params_raw is not None:
@@ -64,7 +66,7 @@ def parse_chat(messages: list[dict], bgg_username=None, bgg_password=None):
                 "content": f"Function call: {params_raw}",
             }
         )
-        logger.info(f"Function call: {params_raw}")
+        logger.info("function call", params=str(params_raw))
         params = json.loads(params_raw.arguments)
         func_name = params_raw.name
         func = func_map[func_name]
@@ -73,7 +75,7 @@ def parse_chat(messages: list[dict], bgg_username=None, bgg_password=None):
         if func_name in ["log_game", "delete_play", "list_played_games", "wishlist_game", "own_game", "list_my_games"] and bgg_username and bgg_password:
             params["username"] = bgg_username
             params["password"] = bgg_password
-            logger.info(f"Added BGG credentials for {func_name} (user: {bgg_username})")
+            logger.info("added BGG credentials", func_name=func_name, user=bgg_username)
 
         output = func(**params)
         messages.append(
@@ -82,7 +84,7 @@ def parse_chat(messages: list[dict], bgg_username=None, bgg_password=None):
                 "content": f"Function output: {output}",
             }
         )
-        logger.info(f"Function output: {output}")
+        logger.info("function output", output=output)
     else:
         messages.append(
             {

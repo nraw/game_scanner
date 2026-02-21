@@ -1,6 +1,8 @@
 from typing import Optional, Tuple
 
-from loguru import logger
+import structlog
+
+logger = structlog.get_logger()
 
 from game_scanner.db import get_collection
 from game_scanner.user_auth import authenticate_user
@@ -42,7 +44,7 @@ def check_is_user(telegram_user_id: int) -> Tuple[bool, int]:
         return False, 0
 
     except Exception as e:
-        logger.error(f"Error checking user {telegram_user_id}: {e}")
+        logger.error("error checking user", telegram_user_id=telegram_user_id, error=str(e))
         return False, 0
 
 
@@ -71,13 +73,11 @@ def consume_credit(telegram_user_id: int, amount: int = 1) -> bool:
         doc_id = docs[0].id
         users_collection.document(doc_id).update({"credits": new_credits})
 
-        logger.info(
-            f"Consumed {amount} credit(s) for user {telegram_user_id}. Remaining: {new_credits}"
-        )
+        logger.info("consumed credits", telegram_user_id=telegram_user_id, amount=amount, remaining=new_credits)
         return True
 
     except Exception as e:
-        logger.error(f"Error consuming credits for user {telegram_user_id}: {e}")
+        logger.error("error consuming credits", telegram_user_id=telegram_user_id, error=str(e))
         return False
 
 
@@ -102,13 +102,11 @@ def add_credits(telegram_user_id: int, amount: int) -> bool:
         doc_id = docs[0].id
         users_collection.document(doc_id).update({"credits": new_credits})
 
-        logger.info(
-            f"Added {amount} credit(s) to user {telegram_user_id}. New balance: {new_credits}"
-        )
+        logger.info("added credits", telegram_user_id=telegram_user_id, amount=amount, new_balance=new_credits)
         return True
 
     except Exception as e:
-        logger.error(f"Error adding credits for user {telegram_user_id}: {e}")
+        logger.error("error adding credits", telegram_user_id=telegram_user_id, error=str(e))
         return False
 
 
@@ -130,20 +128,18 @@ def upgrade_to_premium(telegram_user_id: int) -> bool:
         current_tier = user_data.get("tier", "free")
 
         if current_tier == "premium":
-            logger.info(f"User {telegram_user_id} is already premium")
+            logger.info("user already premium", telegram_user_id=telegram_user_id)
             return True  # Already premium
 
         # Upgrade to premium and give 1000 credits
         doc_id = docs[0].id
         users_collection.document(doc_id).update({"tier": "premium", "credits": 1000})
 
-        logger.info(
-            f"Upgraded user {telegram_user_id} to premium tier with 1000 credits"
-        )
+        logger.info("upgraded to premium", telegram_user_id=telegram_user_id, credits=1000)
         return True
 
     except Exception as e:
-        logger.error(f"Error upgrading user {telegram_user_id} to premium: {e}")
+        logger.error("error upgrading to premium", telegram_user_id=telegram_user_id, error=str(e))
         return False
 
 
@@ -163,7 +159,7 @@ def get_user_tier(telegram_user_id: int) -> str:
         return "unknown"
 
     except Exception as e:
-        logger.error(f"Error getting user tier {telegram_user_id}: {e}")
+        logger.error("error getting user tier", telegram_user_id=telegram_user_id, error=str(e))
         return "unknown"
 
 
@@ -181,23 +177,19 @@ def register_telegram_user(
         user_doc = users_collection.document(api_key)
         user_doc.update({"telegram_user_id": telegram_user_id})
 
-        logger.info(
-            f"Registered Telegram user {telegram_user_id} with BGG username {bgg_username}"
-        )
+        logger.info("registered telegram user", telegram_user_id=telegram_user_id, bgg_username=bgg_username)
         return api_key
 
     except ValueError as e:
         if "already registered" in str(e):
             # Check if this is an existing user without telegram_user_id
-            logger.info(
-                f"BGG username {bgg_username} already exists, checking if we can link to Telegram user {telegram_user_id}"
-            )
+            logger.info("BGG username exists, attempting link", bgg_username=bgg_username, telegram_user_id=telegram_user_id)
             return try_link_existing_user(telegram_user_id, bgg_username, bgg_password)
         else:
-            logger.error(f"Error registering Telegram user {telegram_user_id}: {e}")
+            logger.error("error registering telegram user", telegram_user_id=telegram_user_id, error=str(e))
             return None
     except Exception as e:
-        logger.error(f"Error registering Telegram user {telegram_user_id}: {e}")
+        logger.error("error registering telegram user", telegram_user_id=telegram_user_id, error=str(e))
         return None
 
 
@@ -215,7 +207,7 @@ def try_link_existing_user(
         docs = list(query.get())
 
         if not docs:
-            logger.error(f"No user found with BGG username {bgg_username}")
+            logger.error("no user found", bgg_username=bgg_username)
             return None
 
         user_doc = docs[0]
@@ -224,29 +216,23 @@ def try_link_existing_user(
 
         # Check if user already has a telegram_user_id (someone else might have claimed it)
         if user_data.get("telegram_user_id"):
-            logger.error(
-                f"User {bgg_username} already linked to Telegram user {user_data['telegram_user_id']}"
-            )
+            logger.error("user already linked to another telegram account", bgg_username=bgg_username, existing_telegram_id=user_data['telegram_user_id'])
             return None
 
         # Verify the password matches by trying to decrypt credentials
         stored_creds = get_user_bgg_credentials(api_key)
         if not stored_creds or stored_creds[1] != bgg_password:
-            logger.error(f"Password verification failed for {bgg_username}")
+            logger.error("password verification failed", bgg_username=bgg_username)
             return None
 
         # Link this telegram user to the existing account
         user_doc.reference.update({"telegram_user_id": telegram_user_id})
 
-        logger.info(
-            f"Successfully linked existing user {bgg_username} to Telegram user {telegram_user_id}"
-        )
+        logger.info("linked existing user", bgg_username=bgg_username, telegram_user_id=telegram_user_id)
         return api_key
 
     except Exception as e:
-        logger.error(
-            f"Error linking existing user {bgg_username} to Telegram user {telegram_user_id}: {e}"
-        )
+        logger.error("error linking existing user", bgg_username=bgg_username, telegram_user_id=telegram_user_id, error=str(e))
         return None
 
 
@@ -265,5 +251,5 @@ def get_user_by_telegram_id(telegram_user_id: int) -> Optional[dict]:
         return None
 
     except Exception as e:
-        logger.error(f"Error retrieving user by Telegram ID {telegram_user_id}: {e}")
+        logger.error("error retrieving user", telegram_user_id=telegram_user_id, error=str(e))
         return None

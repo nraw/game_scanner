@@ -2,7 +2,9 @@ import os
 from abc import ABC, abstractmethod
 
 import requests
-from loguru import logger
+import structlog
+
+logger = structlog.get_logger()
 
 from game_scanner.errors import (
     NoSearchMatchesError,
@@ -119,5 +121,5 @@ def get_search_provider() -> SearchProvider:
                 f"Unknown search provider '{name}'. Available: {list(_PROVIDERS.keys())}"
             )
         _provider_instance = provider_cls()
-        logger.info(f"Initialized search provider: {name}")
+        logger.info("initialized search provider", provider=name)
     return _provider_instance

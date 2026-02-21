@@ -6,7 +6,9 @@ from typing import Dict, Optional, Tuple
 
 import requests
 from cryptography.fernet import Fernet
-from loguru import logger
+import structlog
+
+logger = structlog.get_logger()
 
 from game_scanner.db import get_collection
 
@@ -33,7 +35,7 @@ def validate_bgg_credentials(username: str, password: str) -> bool:
     #              return len(response.text.strip()) == 0
     #          return False
     except Exception as e:
-        logger.error(f"BGG credential validation failed: {e}")
+        logger.error("BGG credential validation failed", error=str(e))
         return False
 
 
@@ -88,14 +90,14 @@ def login_user(bgg_username: str, bgg_password: str) -> Optional[str]:
         )
 
         if stored_password == bgg_password:
-            logger.info(f"User {bgg_username} logged in successfully")
+            logger.info("user logged in", bgg_username=bgg_username)
             return user_data["api_key"]
         else:
-            logger.warning(f"Invalid password for user {bgg_username}")
+            logger.warning("invalid password", bgg_username=bgg_username)
             return None
 
     except Exception as e:
-        logger.error(f"Error during login for user {bgg_username}: {e}")
+        logger.error("error during login", bgg_username=bgg_username, error=str(e))
         return None
 
 
@@ -130,7 +132,7 @@ def create_user(bgg_username: str, bgg_password: str) -> str:
     # Use API key as document ID for easy lookup
     users_collection.document(api_key).set(user_data)
 
-    logger.info(f"Created user with BGG username {bgg_username}")
+    logger.info("created user", bgg_username=bgg_username)
     return api_key
 
 
@@ -165,7 +167,7 @@ def get_user_by_api_key(api_key: str) -> Optional[Dict]:
             return user_doc.to_dict()
         return None
     except Exception as e:
-        logger.error(f"Error retrieving user: {e}")
+        logger.error("error retrieving user", error=str(e))
         return None
 
 
@@ -179,7 +181,7 @@ def get_user_bgg_credentials(api_key: str) -> Optional[Tuple[str, str]]:
         encryption_key = base64.b64decode(user["encryption_key"].encode())
         return decrypt_credentials(user["encrypted_credentials"], encryption_key)
     except Exception as e:
-        logger.error(f"Error decrypting credentials: {e}")
+        logger.error("error decrypting credentials", error=str(e))
         return None
 
 
@@ -203,7 +205,7 @@ def verify_and_get_credentials(api_key: str) -> Optional[Tuple[str, str]]:
         encryption_key = base64.b64decode(user["encryption_key"].encode())
         return decrypt_credentials(user["encrypted_credentials"], encryption_key)
     except Exception as e:
-        logger.error(f"Error decrypting credentials: {e}")
+        logger.error("error decrypting credentials", error=str(e))
         return None
 
 
@@ -215,16 +217,16 @@ def delete_user(api_key: str) -> bool:
 
         # Check if user exists
         if not user_doc.get().exists:
-            logger.warning(f"User with API key {api_key} not found")
+            logger.warning("user not found", api_key=api_key)
             return False
 
         # Delete user document
         user_doc.delete()
-        logger.info(f"Deleted user with API key {api_key}")
+        logger.info("deleted user", api_key=api_key)
         return True
 
     except Exception as e:
-        logger.error(f"Error deleting user {api_key}: {e}")
+        logger.error("error deleting user", api_key=api_key, error=str(e))
         return False
 
 
@@ -240,18 +242,18 @@ def delete_user_by_telegram_id(telegram_user_id: int) -> bool:
         docs = list(query.get())
 
         if not docs:
-            logger.warning(f"User with Telegram ID {telegram_user_id} not found")
+            logger.warning("user not found", telegram_user_id=telegram_user_id)
             return False
 
         # Delete the user document
         doc_id = docs[0].id
         users_collection.document(doc_id).delete()
 
-        logger.info(f"Deleted user with Telegram ID {telegram_user_id}")
+        logger.info("deleted user", telegram_user_id=telegram_user_id)
         return True
 
     except Exception as e:
-        logger.error(f"Error deleting user with Telegram ID {telegram_user_id}: {e}")
+        logger.error("error deleting user", telegram_user_id=telegram_user_id, error=str(e))
         return False
 
 

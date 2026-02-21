@@ -10,7 +10,10 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 try:
     import telebot
-    from loguru import logger
+    import structlog
+    from game_scanner.logging import setup_logging
+    setup_logging()
+    logger = structlog.get_logger()
     import sentry_sdk
     from sentry_sdk.integrations.logging import LoggingIntegration
 
@@ -46,7 +49,7 @@ try:
             profiles_sample_rate=1.0,  # Profile 100% of transactions
             environment=os.getenv('SENTRY_ENVIRONMENT', 'development')
         )
-        logger.info("Sentry initialized for API")
+        logger.info("sentry initialized")
     else:
         logger.warning("SENTRY_DSN not set, distributed tracing disabled")
 

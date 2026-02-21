@@ -5,7 +5,9 @@ from datetime import datetime
 from functools import lru_cache
 
 import requests
-from loguru import logger
+import structlog
+
+logger = structlog.get_logger()
 
 from game_scanner.db import save_document
 from game_scanner.errors import (
@@ -22,7 +24,7 @@ def _save_async(data, collection_name):
     try:
         save_document(data, collection_name=collection_name)
     except Exception as e:
-        logger.error(f"Failed to save to {collection_name}: {e}")
+        logger.error("failed to save", collection_name=collection_name, error=str(e))
 
 
 def _save_trace(trace):
@@ -62,7 +64,7 @@ def barcode2bgg(query, return_id=True):
         trace["extracted_titles"] = None
         trace["processed_title"] = title
 
-    logger.info(f"{title=}")
+    logger.info("resolved title", title=title)
     bgg_response = query_google(title, site="boardgamegeek.com/boardgame")
     trace["bgg_search_results"] = bgg_response.get("items", [])
 
@@ -106,7 +108,7 @@ def get_titles(response):
 def process_titles(titles, query=""):
     if len(titles) == 1:
         title = titles[0]
-        logger.warning(f"Only one title matched. Keeping whole title: {title}")
+        logger.warning("only one title matched, keeping whole title", title=title)
     else:
         other_titles = titles[1:]
         counter = Counter()
@@ -119,9 +121,7 @@ def process_titles(titles, query=""):
         title = " ".join(title_words)
         if not title:
             title = titles[0]
-            logger.warning(
-                f"No common words between searches. Keeping first title: {title}"
-            )
+            logger.warning("no common words between searches, keeping first title", title=title)
     return title
 
 

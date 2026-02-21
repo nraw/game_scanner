@@ -2,7 +2,9 @@ import json
 import os
 
 import requests
-from loguru import logger
+import structlog
+
+logger = structlog.get_logger()
 
 
 def add_to_collection(game_id: str, status_config: dict, collection_type: str, username=None, password=None):
@@ -20,8 +22,7 @@ def add_to_collection(game_id: str, status_config: dict, collection_type: str, u
     username = username or os.environ["BGG_USERNAME"]
     password = password or os.environ["BGG_PASS"]
 
-    account_info = f" to {username}'s {collection_type}" if username != os.environ.get("BGG_USERNAME") else f" to service account {collection_type}"
-    logger.info(f"Adding game {game_id}{account_info}")
+    logger.info("adding game to collection", game_id=game_id, collection_type=collection_type, username=username)
 
     login_payload = {"credentials": {"username": username, "password": password}}
 
@@ -54,8 +55,8 @@ def add_to_collection(game_id: str, status_config: dict, collection_type: str, u
             headers=headers,
         )
 
-    success_msg = f"Successfully added game {game_id}{account_info}"
-    logger.info(success_msg)
+    success_msg = f"Successfully added game {game_id} to {username}'s {collection_type}"
+    logger.info("added game to collection", game_id=game_id, collection_type=collection_type, username=username)
     return success_msg if collection_response.status_code == 200 else f"Failed to add game {game_id}: {collection_response.text}"
 
 

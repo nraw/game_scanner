@@ -4,7 +4,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 
 import requests
-from loguru import logger
+import structlog
+
+logger = structlog.get_logger()
 
 
 def get_my_games(player_count, username=None, password=None):
@@ -12,12 +14,7 @@ def get_my_games(player_count, username=None, password=None):
     # Use provided username or fall back to environment variable
     username = username or os.environ.get("BGG_USERNAME", "nraw")
 
-    account_info = (
-        f" for {username}"
-        if username != os.environ.get("BGG_USERNAME", "nraw")
-        else " for service account"
-    )
-    logger.info(f"Retrieving game collection{account_info}")
+    logger.info("retrieving game collection", username=username)
 
     games = filter_games_by_playercount(username, player_count)
     return games
@@ -68,9 +65,9 @@ def get_game_details(game_id):
 
 
 def filter_games_by_playercount(username, player_count):
-    logger.info(f"Filtering games by player count for {username} and {player_count}")
+    logger.info("filtering games by player count", username=username, player_count=player_count)
     games = get_all_games(username)
-    logger.info(f"Found {len(games)} games")
+    logger.info("found games", count=len(games))
     if player_count is None:
         return games
 
@@ -84,7 +81,7 @@ def filter_games_by_playercount(username, player_count):
             try:
                 details = future.result()
             except Exception as exc:
-                logger.error(f'Game {game["bgg_id"]} generated an exception: {exc}')
+                logger.error("game details fetch failed", bgg_id=game["bgg_id"], error=str(exc))
             else:
                 game.update(details)
 
@@ -96,5 +93,5 @@ def filter_games_by_playercount(username, player_count):
         and game["max_players"] is not None
         and game["min_players"] <= player_count <= game["max_players"]
     ]
-    logger.info(f"Filtered to {len(filtered_games)} games")
+    logger.info("filtered games", count=len(filtered_games))
     return filtered_games
