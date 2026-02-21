@@ -17,35 +17,65 @@ from game_scanner.search_provider import get_search_provider
 from game_scanner.settings import conf
 
 
-def _save_search_async(search_data):
-    """Save search data asynchronously to avoid blocking the response."""
+def _save_async(data, collection_name):
+    """Save data asynchronously to avoid blocking the response."""
     try:
-        save_document(search_data, collection_name="google_searches")
+        save_document(data, collection_name=collection_name)
     except Exception as e:
-        logger.error(f"Failed to save search data: {e}")
+        logger.error(f"Failed to save to {collection_name}: {e}")
+
+
+def _save_trace(trace):
+    threading.Thread(target=_save_async, args=(trace, "lookup_traces"), daemon=True).start()
 
 
 @lru_cache(1000)
 def barcode2bgg(query, return_id=True):
+    trace = {
+        "query": query,
+        "provider": os.environ.get("SEARCH_PROVIDER", "brave"),
+        "timestamp": datetime.utcnow(),
+    }
+
     if query.isdigit():
-        titles = find_titles_from_barcode(query)
+        barcode_response = query_google(query)
+        trace["search_results"] = barcode_response.get("items", [])
+
+        titles = get_titles(barcode_response)
         if type(titles) == str:
             game_id = titles
+            trace["shortcut"] = True
+            trace["game_id"] = game_id
+            trace["bgg_url"] = barcode_response["items"][0]["link"]
+            _save_trace(trace)
             return game_id
+
+        trace["shortcut"] = False
+        trace["extracted_titles"] = titles
         title = process_titles(titles, query)
+        trace["processed_title"] = title
     else:
         logger.warning("not really a barcode, but I'll just try to parse it")
         title = query
+        trace["shortcut"] = False
+        trace["search_results"] = None
+        trace["extracted_titles"] = None
+        trace["processed_title"] = title
+
     logger.info(f"{title=}")
-    url = get_bgg_url(title)
-    #  is_bgg = "boardgamegeek.com/boardgame" in url
-    #  if not is_bgg:
-    #      raise NotBGGPageError(value=title, url=url)
-    #  else:
+    bgg_response = query_google(title, site="boardgamegeek.com/boardgame")
+    trace["bgg_search_results"] = bgg_response.get("items", [])
+
+    url = bgg_response["items"][0]["link"]
+    trace["bgg_url"] = url
+
     if not return_id:
+        _save_trace(trace)
         return url
     else:
         game_id = get_bgg_id_from_url(url)
+        trace["game_id"] = game_id
+        _save_trace(trace)
         return game_id
 
 
@@ -59,16 +89,6 @@ def find_titles_from_barcode(query):
 def query_google(title, site=None):
     provider = get_search_provider()
     response = provider.search(title, site=site)
-
-    search_data = {
-        "query": title,
-        "site": site,
-        "response": response,
-        "timestamp": datetime.utcnow(),
-        "provider": os.environ.get("SEARCH_PROVIDER", "brave"),
-    }
-    threading.Thread(target=_save_search_async, args=(search_data,), daemon=True).start()
-
     return response
 
 
