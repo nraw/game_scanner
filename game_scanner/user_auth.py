@@ -1,6 +1,7 @@
 import base64
 import json
 import secrets
+from datetime import datetime, timezone
 from typing import Dict, Optional, Tuple
 
 import requests
@@ -123,7 +124,7 @@ def create_user(bgg_username: str, bgg_password: str) -> str:
         "encrypted_credentials": encrypted_creds,
         "encryption_key": base64.b64encode(encryption_key).decode(),
         "tier": "free",  # New users start as free tier
-        "created_at": "2025-08-30",  # You could use firestore.SERVER_TIMESTAMP
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
     # Use API key as document ID for easy lookup
