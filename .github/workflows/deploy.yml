@@ -32,4 +32,6 @@ jobs:
         -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
         -e FIRESTORE_KEY='${{ secrets.FIRESTORE_KEY }}' \
         -e BGG_API_KEY=${{ secrets.BGG_API_KEY }} \
+        -e BRAVE_API_KEY=${{ secrets.BRAVE_API_KEY }} \
+        -e SEARCH_PROVIDER=${{ secrets.SEARCH_PROVIDER }} \
         game_scanner:latest python3 telegram_app.py
