@@ -8,20 +8,21 @@ import requests
 from loguru import logger
 
 from game_scanner.db import save_document
-
-
-def _save_search_async(search_data):
-    """Save Google search data asynchronously to avoid blocking the response."""
-    try:
-        save_document(search_data, collection_name="google_searches")
-    except Exception as e:
-        logger.error(f"Failed to save google search data: {e}")
 from game_scanner.errors import (
     NoGoogleMatchesError,
     GoogleQuotaExceededError,
     GoogleAPIError,
 )
+from game_scanner.search_provider import get_search_provider
 from game_scanner.settings import conf
+
+
+def _save_search_async(search_data):
+    """Save search data asynchronously to avoid blocking the response."""
+    try:
+        save_document(search_data, collection_name="google_searches")
+    except Exception as e:
+        logger.error(f"Failed to save search data: {e}")
 
 
 @lru_cache(1000)
@@ -56,35 +57,18 @@ def find_titles_from_barcode(query):
 
 @lru_cache(1000)
 def query_google(title, site=None):
-    GOOGLE_KEY = os.environ["GOOGLE_KEY"]
-    GOOGLE_CX = os.environ["GOOGLE_CX"]
-    real_query = requests.utils.quote(title)
-    url = f"https://customsearch.googleapis.com/customsearch/v1?key={GOOGLE_KEY}&cx={GOOGLE_CX}&q={real_query}"
-    if site:
-        url += f"&siteSearch={site}"
-    res = requests.get(url)
-    response = res.json()
+    provider = get_search_provider()
+    response = provider.search(title, site=site)
 
-    # Save query and response to google_searches collection asynchronously
     search_data = {
         "query": title,
         "site": site,
         "response": response,
         "timestamp": datetime.utcnow(),
-        "url": url
+        "provider": os.environ.get("SEARCH_PROVIDER", "brave"),
     }
     threading.Thread(target=_save_search_async, args=(search_data,), daemon=True).start()
 
-    # Check for API errors first
-    if "error" in response:
-        error_info = response["error"]
-        if error_info.get("code") == 429:
-            raise GoogleQuotaExceededError(error_info.get('message', 'Rate limit exceeded'))
-        else:
-            raise GoogleAPIError(error_info.get('code'), error_info.get('message'))
-
-    if "items" not in response:
-        raise NoGoogleMatchesError(title)
     return response
 
 

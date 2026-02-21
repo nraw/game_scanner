@@ -1,7 +1,7 @@
 from loguru import logger
 
 
-class NoGoogleMatchesError(Exception):
+class NoSearchMatchesError(Exception):
     def __init__(self, value):
         self.value = value
         self.message = "lol nothing found, good luck with search query"
@@ -23,16 +23,22 @@ class NotBoardgamePageError(Exception):
         logger.error(self.message)
 
 
-class GoogleQuotaExceededError(Exception):
+class SearchQuotaExceededError(Exception):
     def __init__(self, quota_message):
         self.quota_message = quota_message
-        self.message = f"Google API quota exceeded: {quota_message}"
+        self.message = f"Search API quota exceeded: {quota_message}"
         logger.error(self.message)
 
 
-class GoogleAPIError(Exception):
+class SearchAPIError(Exception):
     def __init__(self, error_code, error_message):
         self.error_code = error_code
         self.error_message = error_message
-        self.message = f"Google API error {error_code}: {error_message}"
+        self.message = f"Search API error {error_code}: {error_message}"
         logger.error(self.message)
+
+
+# Backward-compatible aliases
+NoGoogleMatchesError = NoSearchMatchesError
+GoogleQuotaExceededError = SearchQuotaExceededError
+GoogleAPIError = SearchAPIError
