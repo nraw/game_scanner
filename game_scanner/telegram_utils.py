@@ -2,10 +2,10 @@ from typing import Optional, Tuple
 
 import structlog
 
-logger = structlog.get_logger()
-
 from game_scanner.db import get_collection
 from game_scanner.user_auth import authenticate_user
+
+logger = structlog.get_logger()
 
 
 def check_is_user(telegram_user_id: int) -> Tuple[bool, int]:

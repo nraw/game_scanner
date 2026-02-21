@@ -5,8 +5,6 @@ from datetime import date
 import openai
 import structlog
 
-logger = structlog.get_logger()
-
 from game_scanner.add_wishlist import add_wishlist, add_owned
 from game_scanner.list_my_games import get_my_games
 from game_scanner.play_payload_management import (
@@ -26,6 +24,8 @@ from game_scanner.schemas import (
     PlayRequest,
     WishlistRequest,
 )
+
+logger = structlog.get_logger()
 
 func_map = {
     "log_game": log_play_to_bgg,

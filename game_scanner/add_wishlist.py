@@ -43,7 +43,7 @@ def add_to_collection(game_id: str, status_config: dict, collection_type: str, u
     headers = {"content-type": "application/json"}
 
     with requests.Session() as s:
-        login_response = s.post(
+        s.post(
             "https://boardgamegeek.com/login/api/v1",
             data=json.dumps(login_payload),
             headers=headers,

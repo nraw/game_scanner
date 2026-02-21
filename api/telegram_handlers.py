@@ -7,7 +7,6 @@ import json
 import os
 import hashlib
 import hmac
-from urllib.parse import unquote
 
 
 class TelegramHandlers:
@@ -34,7 +33,6 @@ class TelegramHandlers:
                     bgg_password = json_data.get('bgg_password')
                     telegram_user_id = json_data.get('telegram_user_id')
                     telegram_first_name = json_data.get('telegram_first_name', '')
-                    init_data = json_data.get('init_data', '')
 
                     print(f"Parsed data - username: {bgg_username}, telegram_id: {telegram_user_id}")
 

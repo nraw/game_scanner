@@ -1,4 +1,3 @@
-import json
 import os
 import xml.etree.ElementTree as ET
 from datetime import date, datetime
@@ -8,9 +7,9 @@ import cloudscraper
 import requests
 import structlog
 
-logger = structlog.get_logger()
-
 from game_scanner.schemas import PlayPayload
+
+logger = structlog.get_logger()
 
 
 def log_play_to_bgg(username=None, password=None, **play_payload_raw):
@@ -117,11 +116,6 @@ def get_logged_plays(
     # Use provided username or fall back to environment variable
     username = username or os.environ["BGG_USERNAME"]
 
-    account_info = (
-        f" for {username}"
-        if username != os.environ.get("BGG_USERNAME")
-        else " for service account"
-    )
     logger.info("retrieving logged plays", username=username)
 
     base_url = f"https://boardgamegeek.com/xmlapi2/plays?username={username}"
@@ -203,11 +197,6 @@ def delete_logged_play(play_id, username=None, password=None):
         logger.error("BGG play deletion failed", username=username, status_code=r.status_code, response=r.text)
         raise ValueError(f"BGG play deletion failed for user '{username}': {r.status_code}")
 
-    account_info = (
-        f" from {username}'s account"
-        if username != os.environ.get("BGG_USERNAME")
-        else " from service account"
-    )
     logger.info("deleted play", play_id=play_id, username=username)
     return r.text
 
@@ -234,5 +223,5 @@ def update_my_board_games():
         url = "https://api.github.com/repos/nraw/my_board_games/dispatches"
         r = requests.post(url, headers=headers, json=data)
         logger.info("triggered update to my_board_games", status_code=r.status_code)
-    except:
+    except Exception:
         logger.error("failed to update my_board_games")

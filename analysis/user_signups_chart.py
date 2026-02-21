@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from dotenv import load_dotenv
 load_dotenv('.env')
-from game_scanner.db import get_collection
+from game_scanner.db import get_collection  # noqa: E402
 
 coll = get_collection('users')
 dates = []

@@ -1,16 +1,14 @@
 import base64
-import json
 import secrets
 from datetime import datetime, timezone
 from typing import Dict, Optional, Tuple
 
-import requests
 from cryptography.fernet import Fernet
 import structlog
 
-logger = structlog.get_logger()
-
 from game_scanner.db import get_collection
+
+logger = structlog.get_logger()
 
 
 def validate_bgg_credentials(username: str, password: str) -> bool:

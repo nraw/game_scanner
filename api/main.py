@@ -25,8 +25,6 @@ try:
     from game_scanner.user_auth import (
         authenticate_user,
         get_user_by_api_key,
-        get_user_bgg_credentials,
-        verify_api_key,
         verify_and_get_credentials,
         list_all_users,
         delete_user

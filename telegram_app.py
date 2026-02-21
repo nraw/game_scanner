@@ -8,14 +8,14 @@ from game_scanner.logging import setup_logging
 setup_logging()
 logger = structlog.get_logger()
 
-from game_scanner.commands import set_it, spike_it
-from game_scanner.db import retrieve_messages, save_document
-from game_scanner.parse_chat import parse_chat, reply_with_last_bot_query
-from game_scanner.telegram_utils import (check_is_user, consume_credit,
+from game_scanner.commands import set_it, spike_it  # noqa: E402
+from game_scanner.db import retrieve_messages, save_document  # noqa: E402
+from game_scanner.parse_chat import parse_chat, reply_with_last_bot_query  # noqa: E402
+from game_scanner.telegram_utils import (check_is_user, consume_credit,  # noqa: E402
                                          get_user_by_telegram_id,
                                          get_user_tier, register_telegram_user,
                                          upgrade_to_premium)
-from game_scanner.user_auth import delete_user_by_telegram_id
+from game_scanner.user_auth import delete_user_by_telegram_id  # noqa: E402
 
 bot = telebot.TeleBot(os.environ["TELEGRAM_TOKEN"], parse_mode="Markdown")
 

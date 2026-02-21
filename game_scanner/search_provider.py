@@ -4,13 +4,13 @@ from abc import ABC, abstractmethod
 import requests
 import structlog
 
-logger = structlog.get_logger()
-
 from game_scanner.errors import (
     NoSearchMatchesError,
     SearchQuotaExceededError,
     SearchAPIError,
 )
+
+logger = structlog.get_logger()
 
 
 class SearchProvider(ABC):

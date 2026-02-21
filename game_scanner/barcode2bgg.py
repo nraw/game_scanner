@@ -4,19 +4,13 @@ from collections import Counter
 from datetime import datetime
 from functools import lru_cache
 
-import requests
 import structlog
 
-logger = structlog.get_logger()
-
 from game_scanner.db import save_document
-from game_scanner.errors import (
-    NoGoogleMatchesError,
-    GoogleQuotaExceededError,
-    GoogleAPIError,
-)
 from game_scanner.search_provider import get_search_provider
 from game_scanner.settings import conf
+
+logger = structlog.get_logger()
 
 
 def _save_async(data, collection_name):
@@ -44,7 +38,7 @@ def barcode2bgg(query, return_id=True):
         trace["search_results"] = barcode_response.get("items", [])
 
         titles = get_titles(barcode_response)
-        if type(titles) == str:
+        if isinstance(titles, str):
             game_id = titles
             trace["shortcut"] = True
             trace["game_id"] = game_id
